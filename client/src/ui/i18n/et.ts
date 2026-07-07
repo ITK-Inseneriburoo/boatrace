@@ -1,0 +1,62 @@
+/** Kõik UI stringid ühes kohas — teise keele lisamine = üks uus fail */
+const et = {
+  "menu.title": "BOATRACE",
+  "menu.subtitle": "paadivõidusõit",
+  "menu.nimi": "Sinu nimi",
+  "menu.nimi.placeholder": "Sisesta nimi…",
+  "menu.varv": "Paadi värv",
+  "menu.soiduk": "Sõiduk",
+  "menu.rada": "Rada",
+  "menu.ilm": "Ilm",
+  "menu.ringe": "Ringe",
+  "menu.proovisoit": "Proovisõit",
+  "menu.vorgumang": "Mängi võrgus",
+  "menu.tulekul": "tuleb varsti",
+
+  "hud.ring": "Ring",
+  "hud.varav": "Värav",
+  "hud.koht": "koht",
+  "hud.kmh": "km/h",
+  "hud.aeg": "Aeg",
+  "hud.ringiaeg": "Ring",
+  "hud.parim": "Parim",
+  "hud.valesuund": "VALE SUUND!",
+  "hud.start": "START!",
+  "hud.finis": "FINIŠ!",
+  "hud.respawn": "R — tagasi rajale",
+
+  "tulemused.pealkiri": "Tulemused",
+  "tulemused.koht": "Koht",
+  "tulemused.nimi": "Nimi",
+  "tulemused.aeg": "Aeg",
+  "tulemused.parimRing": "Parim ring",
+  "tulemused.ringid": "Ringiajad",
+  "tulemused.uuesti": "Sõida uuesti",
+  "tulemused.menyysse": "Peamenüüsse",
+  "tulemused.dnf": "DNF",
+
+  "lobby.pealkiri": "Võistlustoad",
+  "lobby.uusTuba": "Loo uus tuba",
+  "lobby.tubaNimi": "Toa nimi",
+  "lobby.mangijaid": "Mängijaid",
+  "lobby.rada": "Rada",
+  "lobby.liitu": "Liitu",
+  "lobby.tagasi": "Tagasi",
+  "lobby.tyhi": "Ühtegi tuba pole — loo esimene!",
+  "lobby.yhendus": "Ühendun serveriga…",
+  "lobby.katkes": "Ühendus katkes — proovin uuesti…",
+
+  "tuba.valmis": "Valmis",
+  "tuba.pole_valmis": "Pole valmis",
+  "tuba.alusta": "Alusta võistlust",
+  "tuba.lahku": "Lahku toast",
+  "tuba.host": "host",
+  "tuba.ootab": "Ootab mängijaid…",
+  "tuba.chat.placeholder": "Kirjuta sõnum…",
+} as const;
+
+export type TKey = keyof typeof et;
+
+export function t(key: TKey): string {
+  return et[key];
+}
