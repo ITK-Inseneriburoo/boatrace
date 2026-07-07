@@ -83,6 +83,7 @@ export class Room {
         vehicle: p.vehicle,
         ready: p.ready,
         connected: p.connected,
+        spectator: p.spectator,
       })),
     };
   }
@@ -93,9 +94,11 @@ export class Room {
     this.onChanged();
   }
 
-  addPlayer(p: Player): "ok" | "full" | "racing" {
+  addPlayer(p: Player, spectator = false): "ok" | "full" | "racing" {
     if (this.players.filter((x) => x.connected).length >= MAX_PLAYERS_PER_ROOM) return "full";
-    if (this.phase !== "lobby") return "racing";
+    // Käimasoleva sõiduga saab liituda ainult vaatlejana
+    if (this.phase !== "lobby" && !spectator) return "racing";
+    p.spectator = spectator;
     this.players.push(p);
     p.room = this;
     p.ready = false;
@@ -125,21 +128,29 @@ export class Room {
     return this.players.length === 0;
   }
 
-  /** Kas kõik peale hosti on valmis (host on startides kohe valmis) */
+  /** Kas kõik peale hosti ja vaatlejate on valmis */
   allReady(): boolean {
-    return this.players.every((p) => p.id === this.hostId || !p.connected || p.ready);
+    return this.players.every(
+      (p) => p.id === this.hostId || p.spectator || !p.connected || p.ready,
+    );
+  }
+
+  /** Võistlejad (mitte-vaatlejad) */
+  get racers(): Player[] {
+    return this.players.filter((p) => !p.spectator);
   }
 
   startRace(by: Player): "ok" | "not_host" | "not_ready" {
     if (by.id !== this.hostId) return "not_host";
     if (this.phase !== "lobby") return "not_host";
     if (!this.allReady()) return "not_ready";
+    if (this.racers.length === 0) return "not_ready";
 
     this.phase = "countdown";
     this.finishCount = 0;
     this.raceStartsAt = Date.now() + COUNTDOWN_MS;
     const spawns: Record<string, number> = {};
-    this.players.forEach((p, i) => {
+    this.racers.forEach((p, i) => {
       p.resetRaceProgress();
       p.spawnSlot = i;
       spawns[p.id] = i;
@@ -214,7 +225,7 @@ export class Room {
 
   private checkRaceEnd(): void {
     if (this.phase !== "racing") return;
-    const active = this.players.filter((p) => !p.finished && p.connected);
+    const active = this.racers.filter((p) => !p.finished && p.connected);
     if (active.length === 0) this.endRace();
   }
 
@@ -226,7 +237,7 @@ export class Room {
     this.dnfTimer = null;
     this.standingsTimer = null;
 
-    const results: RaceResultRow[] = this.players
+    const results: RaceResultRow[] = this.racers
       .map((p) => ({
         playerId: p.id,
         name: p.name,
@@ -254,7 +265,7 @@ export class Room {
   private broadcastStandings(): void {
     if (this.phase !== "racing") return;
     const gc = this.gateCount;
-    const order = [...this.players]
+    const order = [...this.racers]
       .sort((a, b) => {
         if (a.finished !== b.finished) return a.finished ? -1 : 1;
         if (a.finished && b.finished) return (a.finishPosition ?? 99) - (b.finishPosition ?? 99);

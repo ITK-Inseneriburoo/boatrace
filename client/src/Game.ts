@@ -6,6 +6,7 @@ import { SkySystem } from "./world/SkySystem";
 import { WEATHERS, type WeatherPreset } from "./world/WeatherPresets";
 import { PlayerBoat } from "./sim/PlayerBoat";
 import { ChaseCamera } from "./camera/ChaseCamera";
+import { SpectatorCamera } from "./camera/SpectatorCamera";
 import { TrackWorld } from "./world/TrackBuilder";
 import { RaceLogic } from "./sim/RaceLogic";
 import { resolveCollisions } from "./sim/Collisions";
@@ -87,12 +88,16 @@ export class Game {
   private sendAccum = 0;
   private standings: string[] = [];
   private mpFinished = false;
+  /** Vaatleja-režiim: ei võistle, vaba kaamera */
+  private spectating = false;
+  private spectatorCam: SpectatorCamera;
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.engine = new Engine(canvas);
     this.sky = new SkySystem(this.engine);
     this.engine.scene.add(this.ocean.group);
     this.chaseCam = new ChaseCamera(this.engine.camera);
+    this.spectatorCam = new SpectatorCamera(this.engine.camera);
 
     // Taustamaailm = menüüs viimati valitud rada
     this.track = new TrackWorld(getTrack(this.menu.currentTrack()));
@@ -148,6 +153,8 @@ export class Game {
 
     this.lobbyScreen.onCreate = (name) => this.net?.send({ type: "createRoom", roomName: name });
     this.lobbyScreen.onJoin = (roomId) => this.net?.send({ type: "joinRoom", roomId });
+    this.lobbyScreen.onSpectate = (roomId) =>
+      this.net?.send({ type: "joinRoom", roomId, spectator: true });
     this.lobbyScreen.onBack = () => {
       this.net?.disconnect();
       this.net = null;
@@ -155,6 +162,7 @@ export class Game {
     };
 
     this.roomScreen.onReady = (ready) => this.net?.send({ type: "setReady", ready });
+    this.roomScreen.onSpectator = (on) => this.net?.send({ type: "setSpectator", on });
     this.roomScreen.onVehicle = (vehicle) => this.net?.send({ type: "selectVehicle", vehicle });
     this.roomScreen.onConfigure = (trackId, weatherId, laps) =>
       this.net?.send({ type: "configureRace", config: { trackId, weatherId, laps } });
@@ -352,13 +360,33 @@ export class Game {
     this.applyWeather(WEATHERS[config.weatherId as keyof typeof WEATHERS]);
 
     const me = this.room.players.find((p) => p.id === this.net!.playerId);
-    const mySlot = spawns[this.net.playerId ?? ""] ?? 0;
-    this.spawnOwnBoat(me?.vehicle ?? "kiirpaat", me?.color ?? 0xe63946, mySlot);
+    this.spectating = me?.spectator ?? !(this.net.playerId! in spawns);
 
-    // Kaugpaadid stardikohtadele (+ ruumiline mootoriheli)
+    if (this.spectating) {
+      // Vaatleja: oma paati pole, kaamera stardijoone kohale
+      if (this.boat) {
+        this.engine.scene.remove(this.boat.mesh);
+        this.boat = null;
+      }
+      this.ownEngine?.dispose();
+      this.ownEngine = null;
+      this.race = null;
+      const g0 = this.track.gates[0];
+      this.spectatorCam.reset(g0.center.x, g0.center.z);
+    } else {
+      const mySlot = spawns[this.net.playerId ?? ""] ?? 0;
+      this.spawnOwnBoat(me?.vehicle ?? "kiirpaat", me?.color ?? 0xe63946, mySlot);
+      this.race = new RaceLogic(this.track, config.laps);
+      this.race.onGate = (gate) => {
+        this.net?.send({ type: "gate", gate });
+        this.sfx.chime();
+      };
+    }
+
+    // Kaugpaadid stardikohtadele — ainult võistlejad (spawns-i liikmed)
     this.clearRemoteBoats();
     for (const p of this.room.players) {
-      if (p.id === this.net.playerId) continue;
+      if (p.id === this.net.playerId || !(p.id in spawns)) continue;
       const rb = new RemoteBoat(p.id, p.vehicle, p.color);
       const sp = this.track.spawnPoint(spawns[p.id] ?? 0);
       rb.mesh.position.set(sp.x, 0, sp.z);
@@ -371,12 +399,6 @@ export class Game {
       );
     }
 
-    this.race = new RaceLogic(this.track, config.laps);
-    this.race.onGate = (gate) => {
-      this.net?.send({ type: "gate", gate });
-      this.sfx.chime();
-    };
-
     this.mpStartsAt = startsAt;
     this.mpStarted = false;
     this.mpFinished = false;
@@ -386,13 +408,16 @@ export class Game {
 
     this.screens.show(null);
     this.hud.show();
-    this.gateArrow.visible = true;
+    this.hud.setSpectator(this.spectating, t("hud.vaatleja.legend"));
+    this.gateArrow.visible = !this.spectating;
     this.state = "countdown";
   }
 
   private backToRoom(): void {
     this.state = "room";
     this.hud.hide();
+    this.hud.setSpectator(false);
+    this.spectating = false;
     this.gateArrow.visible = false;
     this.clearRemoteBoats();
     this.stopRaceAudio();
@@ -466,6 +491,8 @@ export class Game {
     this.state = "menu";
     this.mode = "solo";
     this.hud.hide();
+    this.hud.setSpectator(false);
+    this.spectating = false;
     this.gateArrow.visible = false;
     this.clearRemoteBoats();
     this.stopRaceAudio();
@@ -510,7 +537,7 @@ export class Game {
   private update(dt: number): void {
     this.sky.update(dt);
 
-    if (this.state === "countdown" && this.boat) {
+    if (this.state === "countdown") {
       let remaining: number;
       if (this.mode === "mp") {
         remaining = (this.mpStartsAt - (this.net?.serverNow() ?? 0)) / 1000;
@@ -524,15 +551,20 @@ export class Game {
         this.hud.flashCenter(String(n), 0.9);
         this.sfx.countBlip();
       }
-      this.boat.update({ throttle: 0, steer: 0, slide: false }, this.weather.waves, this.engine.simTime, dt);
+      this.boat?.update({ throttle: 0, steer: 0, slide: false }, this.weather.waves, this.engine.simTime, dt);
       const canStart = this.mode === "mp" ? remaining <= 0 || this.mpStarted : remaining <= 0;
       if (canStart) {
         this.state = "racing";
-        this.race!.start();
+        this.race?.start();
         this.hud.flashCenter(t("hud.start"), 1);
         this.sfx.countBlip(true);
       }
       return;
+    }
+
+    // Vaatleja: Tab tsükleerib vaatepunkte
+    if (this.spectating && this.state === "racing" && this.input.wasPressed("Tab")) {
+      this.spectatorCam.cycle(this.remoteBoats.size);
     }
 
     if (this.state === "racing" && this.boat && this.race) {
@@ -617,6 +649,14 @@ export class Game {
       this.engine.camera.fov = 55;
       this.engine.camera.updateProjectionMatrix();
       this.sky.followTarget(this.engine.camera.position);
+    } else if (this.spectating) {
+      const targets = [...this.remoteBoats.values()].map((rb) => ({
+        x: rb.x,
+        z: rb.z,
+        yaw: rb.yaw,
+      }));
+      this.spectatorCam.update(this.input, targets, frameDt);
+      this.sky.followTarget(this.engine.camera.position);
     } else if (this.boat) {
       this.boat.applyVisual(alpha);
       this.chaseCam.update(this.boat.physics, this.weather.waves, time, frameDt);
@@ -681,24 +721,26 @@ export class Game {
     // --- Efektid: pritsmed + kiiluvesi + vihm ---
     this.effects.update(time);
     if (this.wake) this.wake.begin();
-    if (this.boat && (this.state === "racing" || this.state === "countdown")) {
-      const p = this.boat.physics;
-      const ratio = clamp(p.speed / p.stats.topSpeed, 0, 1);
-      this.effects.boatSpray(
-        "me",
-        {
-          x: p.pos.x, y: p.pos.y, z: p.pos.z,
-          yaw: p.yaw,
-          speed: p.speed,
-          topSpeed: p.stats.topSpeed,
-          airborne: p.airborne,
-          isJet: p.stats.tyyp === "jett",
-        },
-        frameDt,
-        this.weather.waves,
-        time,
-      );
-      this.wake?.stamp(p.pos.x, p.pos.z, p.yaw, ratio);
+    if (this.state === "racing" || this.state === "countdown") {
+      if (this.boat) {
+        const p = this.boat.physics;
+        const ratio = clamp(p.speed / p.stats.topSpeed, 0, 1);
+        this.effects.boatSpray(
+          "me",
+          {
+            x: p.pos.x, y: p.pos.y, z: p.pos.z,
+            yaw: p.yaw,
+            speed: p.speed,
+            topSpeed: p.stats.topSpeed,
+            airborne: p.airborne,
+            isJet: p.stats.tyyp === "jett",
+          },
+          frameDt,
+          this.weather.waves,
+          time,
+        );
+        this.wake?.stamp(p.pos.x, p.pos.z, p.yaw, ratio);
+      }
       for (const rb of this.remoteBoats.values()) {
         const stats = VEHICLES[rb.vehicle];
         this.effects.boatSpray(
@@ -731,6 +773,15 @@ export class Game {
   }
 
   private updateHud(frameDt: number): void {
+    if (this.spectating) {
+      // Vaatleja: ainult minimap + keskteated
+      const dots: MinimapDot[] = [];
+      for (const rb of this.remoteBoats.values()) {
+        dots.push({ x: rb.x, z: rb.z, yaw: rb.yaw, color: "#ffb3ba", me: false });
+      }
+      this.hud.update(frameDt, dots);
+      return;
+    }
     const b = this.boat!;
     const r = this.race!;
     this.hud.setSpeed(b.physics.speed * 3.6);

@@ -80,7 +80,7 @@ export class ConnectionHandler {
         player.send({ type: "roomState", room: player.room.stateMsg() });
         if (player.room.phase === "countdown" || player.room.phase === "racing") {
           const spawns: Record<string, number> = {};
-          player.room.players.forEach((p) => (spawns[p.id] = p.spawnSlot));
+          player.room.racers.forEach((p) => (spawns[p.id] = p.spawnSlot));
           player.send({
             type: "countdown",
             startsAt: player.room.raceStartsAt,
@@ -159,9 +159,23 @@ export class ConnectionHandler {
           this.sendError(p, "ROOM_NOT_FOUND", "Tuba ei leitud");
           break;
         }
-        const res = room.addPlayer(p);
+        const res = room.addPlayer(p, msg.spectator === true);
         if (res === "full") this.sendError(p, "ROOM_FULL", "Tuba on täis");
         else if (res === "racing") this.sendError(p, "ROOM_RACING", "Võistlus juba käib");
+        else if (room.phase === "countdown" || room.phase === "racing") {
+          // Vaatleja liitus keset sõitu — saada sõiduseis
+          const spawns: Record<string, number> = {};
+          room.racers.forEach((rp) => (spawns[rp.id] = rp.spawnSlot));
+          p.send({
+            type: "countdown",
+            startsAt: room.raceStartsAt,
+            config: room.config,
+            spawns,
+          });
+          if (room.phase === "racing") {
+            p.send({ type: "raceStarted", startTime: room.raceStartTime });
+          }
+        }
         break;
       }
 
@@ -195,6 +209,14 @@ export class ConnectionHandler {
       case "setReady":
         if (p.room?.phase === "lobby") {
           p.ready = msg.ready;
+          p.room.sync();
+        }
+        break;
+
+      case "setSpectator":
+        if (p.room?.phase === "lobby") {
+          p.spectator = msg.on;
+          p.ready = false;
           p.room.sync();
         }
         break;

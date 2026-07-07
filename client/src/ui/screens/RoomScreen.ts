@@ -10,6 +10,7 @@ import { WEATHERS } from "../../world/WeatherPresets";
 export class RoomScreen implements Screen {
   readonly el: HTMLElement;
   onReady: (ready: boolean) => void = () => {};
+  onSpectator: (on: boolean) => void = () => {};
   onVehicle: (v: VehicleId) => void = () => {};
   onConfigure: (trackId: TrackId, weatherId: WeatherId, laps: number) => void = () => {};
   onStart: () => void = () => {};
@@ -25,10 +26,12 @@ export class RoomScreen implements Screen {
   private weatherWrap: HTMLElement;
   private lapsWrap: HTMLElement;
   private readyBtn: HTMLButtonElement;
+  private spectatorBtn: HTMLButtonElement;
   private startBtn: HTMLButtonElement;
   private chatLog: HTMLElement;
   private chatInput: HTMLInputElement;
   private myReady = false;
+  private mySpectator = false;
 
   constructor() {
     this.titleEl = h("h2", { style: "margin:0" });
@@ -42,6 +45,11 @@ export class RoomScreen implements Screen {
     this.readyBtn.onclick = () => {
       this.myReady = !this.myReady;
       this.onReady(this.myReady);
+    };
+    this.spectatorBtn = h("button", {}, t("tuba.vaatleja")) as HTMLButtonElement;
+    this.spectatorBtn.onclick = () => {
+      this.mySpectator = !this.mySpectator;
+      this.onSpectator(this.mySpectator);
     };
     this.startBtn = h("button", { class: "primary" }, t("tuba.alusta")) as HTMLButtonElement;
     this.startBtn.onclick = () => this.onStart();
@@ -81,7 +89,7 @@ export class RoomScreen implements Screen {
           h("div", { class: "field" }, h("label", {}, t("menu.ilm")), this.weatherWrap),
           h("div", { class: "field" }, h("label", {}, t("menu.ringe")), this.lapsWrap),
           h("div", { class: "field", style: "width:100%" }, this.chatLog, this.chatInput),
-          h("div", { class: "row" }, this.readyBtn, this.startBtn, leaveBtn),
+          h("div", { class: "row" }, this.readyBtn, this.spectatorBtn, this.startBtn, leaveBtn),
         ),
       ),
     );
@@ -103,6 +111,7 @@ export class RoomScreen implements Screen {
     const isHost = this.myId === room.hostId;
     const me = room.players.find((p) => p.id === this.myId);
     this.myReady = me?.ready ?? false;
+    this.mySpectator = me?.spectator ?? false;
 
     this.titleEl.textContent = room.name;
 
@@ -116,8 +125,9 @@ export class RoomScreen implements Screen {
       });
       const tags: string[] = [];
       if (p.id === room.hostId) tags.push(t("tuba.host"));
+      if (p.spectator) tags.push("👁 " + t("tuba.vaatleja").toLowerCase());
       if (!p.connected) tags.push("⚠ ühendus katkes");
-      const ready = p.id === room.hostId || p.ready;
+      const ready = p.spectator || p.id === room.hostId || p.ready;
       const row = h(
         "div",
         { style: "display:flex;align-items:center;gap:8px" },
@@ -128,7 +138,7 @@ export class RoomScreen implements Screen {
         h(
           "span",
           { style: `margin-left:auto;font-size:.85rem;color:${ready ? "var(--accent)" : "var(--text-dim)"}` },
-          ready ? "✓ " + t("tuba.valmis") : t("tuba.pole_valmis"),
+          p.spectator ? t("tuba.vaatlen") : ready ? "✓ " + t("tuba.valmis") : t("tuba.pole_valmis"),
         ),
       );
       list.appendChild(row);
@@ -189,10 +199,17 @@ export class RoomScreen implements Screen {
     }
 
     // Nupud
-    this.readyBtn.style.display = isHost ? "none" : "";
+    this.readyBtn.style.display = isHost || this.mySpectator ? "none" : "";
     this.readyBtn.textContent = this.myReady ? "✓ " + t("tuba.valmis") : t("tuba.valmis");
+    this.spectatorBtn.textContent = this.mySpectator
+      ? t("tuba.vaatlen")
+      : t("tuba.vaatleja");
+    this.spectatorBtn.classList.toggle("primary", this.mySpectator);
     this.startBtn.style.display = isHost ? "" : "none";
-    const allReady = room.players.every((p) => p.id === room.hostId || !p.connected || p.ready);
-    this.startBtn.disabled = !allReady || room.players.filter((p) => p.connected).length < 1;
+    const allReady = room.players.every(
+      (p) => p.id === room.hostId || p.spectator || !p.connected || p.ready,
+    );
+    const racers = room.players.filter((p) => p.connected && !p.spectator).length;
+    this.startBtn.disabled = !allReady || racers < 1;
   }
 }

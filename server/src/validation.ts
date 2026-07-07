@@ -68,8 +68,14 @@ export function validateC2S(raw: unknown): C2S | null {
     }
     case "joinRoom":
       return typeof m.roomId === "string" && m.roomId.length <= 12
-        ? { type: "joinRoom", roomId: m.roomId }
+        ? {
+            type: "joinRoom",
+            roomId: m.roomId,
+            spectator: m.spectator === true,
+          }
         : null;
+    case "setSpectator":
+      return typeof m.on === "boolean" ? { type: "setSpectator", on: m.on } : null;
     case "leaveRoom":
       return { type: "leaveRoom" };
     case "chat": {

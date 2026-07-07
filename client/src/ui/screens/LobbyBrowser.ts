@@ -7,6 +7,7 @@ import { TRACKS } from "@shared/tracks";
 export class LobbyBrowser implements Screen {
   readonly el: HTMLElement;
   onJoin: (roomId: string) => void = () => {};
+  onSpectate: (roomId: string) => void = () => {};
   onCreate: (name: string) => void = () => {};
   onBack: () => void = () => {};
 
@@ -74,6 +75,10 @@ export class LobbyBrowser implements Screen {
       const joinBtn = h("button", {}, t("lobby.liitu")) as HTMLButtonElement;
       joinBtn.disabled = r.players >= r.maxPlayers || r.phase !== "lobby";
       joinBtn.onclick = () => this.onJoin(r.id);
+      // Käimasolevat sõitu saab vaadata vaatlejana
+      const watchBtn = h("button", {}, "👁 " + t("lobby.vaatle")) as HTMLButtonElement;
+      watchBtn.disabled = r.players >= r.maxPlayers;
+      watchBtn.onclick = () => this.onSpectate(r.id);
       table.appendChild(
         h(
           "tr",
@@ -81,7 +86,7 @@ export class LobbyBrowser implements Screen {
           h("td", {}, r.name),
           h("td", {}, `${r.players}/${r.maxPlayers}`),
           h("td", {}, TRACKS[r.trackId]?.nimi ?? r.trackId),
-          h("td", {}, joinBtn),
+          h("td", {}, h("div", { class: "row" }, joinBtn, watchBtn)),
         ),
       );
     }

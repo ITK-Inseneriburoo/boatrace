@@ -52,6 +52,10 @@ const et = {
 
   "tuba.valmis": "Valmis",
   "tuba.pole_valmis": "Pole valmis",
+  "tuba.vaatleja": "Vaatleja",
+  "tuba.vaatlen": "👁 Vaatlen",
+  "lobby.vaatle": "Vaatle",
+  "hud.vaatleja.legend": "WASD — liigu · Q/E — kõrgus · Tab — järgne paadile",
   "tuba.alusta": "Alusta võistlust",
   "tuba.lahku": "Lahku toast",
   "tuba.host": "host",

@@ -66,6 +66,16 @@ export class Hud {
     this.el.style.display = "none";
   }
 
+  /** Vaatlejavaade: peida sõitjaspetsiifiline (kiirus, ring, ajad, koht) */
+  setSpectator(on: boolean, legend?: string): void {
+    const d = on ? "none" : "";
+    this.speedNum.parentElement!.style.display = d;
+    this.lapEl.style.display = d;
+    this.timesEl.style.display = d;
+    this.posEl.style.display = d;
+    this.hintEl.textContent = on && legend ? legend : t("hud.respawn");
+  }
+
   setSpeed(kmh: number): void {
     this.speedNum.textContent = String(Math.max(0, Math.round(kmh)));
   }

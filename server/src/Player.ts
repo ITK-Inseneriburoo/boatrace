@@ -11,6 +11,7 @@ export class Player {
   color: number;
   vehicle: VehicleId = "kiirpaat";
   ready = false;
+  spectator = false;
   socket: WebSocket | null = null;
   room: Room | null = null;
   disconnectedAt: number | null = null;

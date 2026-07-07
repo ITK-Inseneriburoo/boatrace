@@ -8,6 +8,8 @@ export class Input {
 
   constructor() {
     window.addEventListener("keydown", (e) => {
+      // Tab on vaatleja kaameravahetus — ära lase fookusel rännata
+      if (e.code === "Tab") e.preventDefault();
       if (e.repeat) return;
       this.keys.add(e.code);
       this.justPressed.add(e.code);

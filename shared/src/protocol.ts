@@ -7,6 +7,8 @@ export interface PlayerInfo {
   vehicle: VehicleId;
   ready: boolean;
   connected: boolean;
+  /** vaatleja ei võistle — jälgib sõitu vaba kaameraga */
+  spectator: boolean;
 }
 
 export interface RoomConfig {
@@ -58,12 +60,13 @@ export type C2S =
   | { type: "hello"; name: string; color: number; sessionToken?: string }
   | { type: "listRooms" }
   | { type: "createRoom"; roomName: string }
-  | { type: "joinRoom"; roomId: string }
+  | { type: "joinRoom"; roomId: string; spectator?: boolean }
   | { type: "leaveRoom" }
   | { type: "chat"; text: string }
   | { type: "selectVehicle"; vehicle: VehicleId }
   | { type: "setColor"; color: number }
   | { type: "setReady"; ready: boolean }
+  | { type: "setSpectator"; on: boolean }
   | { type: "configureRace"; config: RoomConfig }
   | { type: "startRace" }
   | ({ type: "state" } & StatePayload)
