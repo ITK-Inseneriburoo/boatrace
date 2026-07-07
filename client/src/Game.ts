@@ -27,6 +27,9 @@ import type { MinimapDot } from "./ui/Minimap";
 import { AudioEngine } from "./audio/AudioEngine";
 import { EngineSound } from "./audio/EngineSound";
 import { Sfx } from "./audio/Sfx";
+import { Effects } from "./fx/Effects";
+import { WakeSystem } from "./world/WakeSystem";
+import { Rain } from "./world/Rain";
 import { VEHICLES } from "@shared/vehicles";
 import { clamp } from "@shared/math";
 
@@ -63,6 +66,11 @@ export class Game {
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
 
+  // --- Efektid ---
+  private effects = new Effects();
+  private wake: WakeSystem | null = null;
+  private rain = new Rain(3000);
+
   // --- Heli ---
   private audio = new AudioEngine();
   private sfx = new Sfx(this.audio);
@@ -88,6 +96,8 @@ export class Game {
 
     this.track = new TrackWorld(getTrack("saarestik"));
     this.engine.scene.add(this.track.group);
+    this.engine.scene.add(this.effects.group);
+    this.engine.scene.add(this.rain.points);
     this.attachTrackDeps();
 
     this.gateArrow = new THREE.Mesh(
@@ -160,16 +170,20 @@ export class Game {
   }
 
   private attachTrackDeps(): void {
+    const size = this.track.terrain.size;
     this.ocean.setDepthTexture(
       this.track.terrain.depthTexture,
-      -this.track.terrain.size / 2,
-      -this.track.terrain.size / 2,
-      this.track.terrain.size,
-      this.track.terrain.size,
+      -size / 2,
+      -size / 2,
+      size,
+      size,
       1,
       0,
     );
     this.hud.attachTrack(this.track);
+    // Kiiluvee-RT katab kogu raja ala (v-telg peegeldatud — vt WakeSystem)
+    this.wake = new WakeSystem(size);
+    this.ocean.setWakeTexture(this.wake.texture, -size / 2, size / 2, size, -size);
   }
 
   private applyWeather(w: WeatherPreset): void {
@@ -178,6 +192,7 @@ export class Game {
     this.ocean.applyWeather(w);
     if (this.sky.envCube) this.ocean.setEnvironment(this.sky.envCube, this.sky.sunDir);
     this.audio.setAmbient(w.id);
+    this.rain.setEnabled(w.rainCount > 0);
   }
 
   setTrack(id: TrackId): void {
@@ -395,6 +410,15 @@ export class Game {
     this.boat.physics.onLanding = (impact) => {
       this.chaseCam.addTrauma(Math.min(impact * 0.06, 0.5));
       this.sfx.splash(impact * 0.12);
+      if (this.boat) {
+        this.effects.burst(
+          this.boat.physics.pos.x,
+          this.boat.physics.pos.z,
+          Math.min(impact * 0.14, 1),
+          this.weather.waves,
+          this.engine.simTime,
+        );
+      }
     };
     this.chaseCam.snapTo(this.boat.physics);
 
@@ -616,6 +640,49 @@ export class Game {
       );
       this.gateArrow.rotation.y = time * 1.5;
     }
+
+    // --- Efektid: pritsmed + kiiluvesi + vihm ---
+    this.effects.update(time);
+    if (this.wake) this.wake.begin();
+    if (this.boat && (this.state === "racing" || this.state === "countdown")) {
+      const p = this.boat.physics;
+      const ratio = clamp(p.speed / p.stats.topSpeed, 0, 1);
+      this.effects.boatSpray(
+        "me",
+        {
+          x: p.pos.x, y: p.pos.y, z: p.pos.z,
+          yaw: p.yaw,
+          speed: p.speed,
+          topSpeed: p.stats.topSpeed,
+          airborne: p.airborne,
+          isJet: p.stats.tyyp === "jett",
+        },
+        frameDt,
+        this.weather.waves,
+        time,
+      );
+      this.wake?.stamp(p.pos.x, p.pos.z, p.yaw, ratio);
+      for (const rb of this.remoteBoats.values()) {
+        const stats = VEHICLES[rb.vehicle];
+        this.effects.boatSpray(
+          rb.playerId,
+          {
+            x: rb.x, y: rb.mesh.position.y, z: rb.z,
+            yaw: rb.yaw,
+            speed: rb.speed,
+            topSpeed: stats.topSpeed,
+            airborne: false,
+            isJet: stats.tyyp === "jett",
+          },
+          frameDt,
+          this.weather.waves,
+          time,
+        );
+        this.wake?.stamp(rb.x, rb.z, rb.yaw, clamp(rb.speed / stats.topSpeed, 0, 1));
+      }
+    }
+    this.wake?.render(this.engine.renderer);
+    this.rain.update(time, this.engine.camera.position);
 
     this.ocean.update(time, this.engine.camera.position);
 
