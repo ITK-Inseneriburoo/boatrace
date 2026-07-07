@@ -1,0 +1,170 @@
+import * as THREE from "three";
+import type { TrackDef } from "@shared/tracks";
+import { clamp, fbm2, smoothstep } from "@shared/math";
+
+const GRID = 256;
+
+/**
+ * Deterministlik maastik: saarte radiaalkühmud + fBm müra,
+ * millest süvendatakse rajasplaini äärde alati sõidetav kanal.
+ * Sama seemnega tuleb kõigil klientidel identne maastik.
+ */
+export class Terrain {
+  readonly mesh: THREE.Mesh;
+  /** kõrguskaart ookeanishaderi madalike/kaldavahu jaoks */
+  readonly depthTexture: THREE.DataTexture;
+  readonly size: number;
+
+  private heights: Float32Array;
+  private cell: number;
+
+  constructor(track: TrackDef, routePolyline: THREE.Vector2[]) {
+    const t = track.terrain;
+    this.size = t.size;
+    this.cell = t.size / (GRID - 1);
+    this.heights = new Float32Array(GRID * GRID);
+
+    // --- 1. Kõrgused ---
+    for (let iz = 0; iz < GRID; iz++) {
+      for (let ix = 0; ix < GRID; ix++) {
+        const x = -t.size / 2 + ix * this.cell;
+        const z = -t.size / 2 + iz * this.cell;
+
+        let h = -t.baseDepth;
+        let islandMask = 0;
+        for (const isl of t.islands) {
+          const d = Math.hypot(x - isl.x, z - isl.z) / isl.r;
+          if (d < 1.6) {
+            const bump = Math.pow(Math.max(0, 1 - d * d * 0.62), 1.6);
+            h += (isl.h + t.baseDepth) * bump;
+            islandMask = Math.max(islandMask, bump);
+          }
+        }
+        // Müra ainult saarte lähedal (meri jääb siledaks)
+        const n = fbm2(x * t.noiseScale, z * t.noiseScale, 4, track.seed);
+        h += (n - 0.45) * t.noiseAmp * islandMask;
+
+        this.heights[iz * GRID + ix] = h;
+      }
+    }
+
+    // --- 2. Kanali süvendamine splaini äärde ---
+    // Iga rastripunkti kaugus lähimast polyline-lõigust
+    for (let iz = 0; iz < GRID; iz++) {
+      for (let ix = 0; ix < GRID; ix++) {
+        const x = -t.size / 2 + ix * this.cell;
+        const z = -t.size / 2 + iz * this.cell;
+        const d = distToPolyline(x, z, routePolyline);
+        if (d < t.carveWidth) {
+          const k = smoothstep(t.carveWidth, t.carveWidth * 0.55, d); // 1 keskel
+          const i = iz * GRID + ix;
+          const carved = -5.5;
+          this.heights[i] = Math.min(
+            this.heights[i],
+            carved * k + this.heights[i] * (1 - k),
+          );
+          // Kanali keskel garanteeritult sügav
+          if (d < t.carveWidth * 0.55) this.heights[i] = Math.min(this.heights[i], carved);
+        }
+      }
+    }
+
+    // --- 3. Mesh vertex-värvidega (liiv/rohi/kalju) ---
+    const geo = new THREE.PlaneGeometry(t.size, t.size, GRID - 1, GRID - 1);
+    geo.rotateX(-Math.PI / 2);
+    const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+    const colors = new Float32Array(pos.count * 3);
+    const sand = new THREE.Color(0xcbb389);
+    const grass = new THREE.Color(0x4a7440);
+    const rock = new THREE.Color(0x7d7a72);
+    const dark = new THREE.Color(0x2b3c38); // veealune
+
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const h = this.getHeight(x, z);
+      pos.setY(i, h);
+
+      const c = new THREE.Color();
+      if (h < -0.4) c.copy(dark);
+      else if (h < 0.9) c.copy(sand);
+      else if (h < 5.5) c.copy(grass).lerp(sand, clamp(1 - (h - 0.9) / 1.4, 0, 1) * 0.7);
+      else c.copy(rock).lerp(grass, clamp(1 - (h - 5.5) / 2.5, 0, 1));
+      // Kerge variatsioon
+      const v = fbm2(x * 0.05, z * 0.05, 2, track.seed + 7) * 0.16;
+      c.offsetHSL(0, 0, v - 0.08);
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geo.computeVertexNormals();
+
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.95,
+      metalness: 0,
+    });
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.receiveShadow = true;
+
+    // --- 4. Sügavustekstuur ookeanile (r = normaliseeritud kõrgus) ---
+    const texData = new Float32Array(GRID * GRID);
+    for (let i = 0; i < GRID * GRID; i++) {
+      texData[i] = this.heights[i];
+    }
+    this.depthTexture = new THREE.DataTexture(
+      texData,
+      GRID,
+      GRID,
+      THREE.RedFormat,
+      THREE.FloatType,
+    );
+    this.depthTexture.minFilter = THREE.LinearFilter;
+    this.depthTexture.magFilter = THREE.LinearFilter;
+    this.depthTexture.needsUpdate = true;
+  }
+
+  /** Bilineaarne kõrgusproov maailmakoordinaatides */
+  getHeight(x: number, z: number): number {
+    const fx = (x + this.size / 2) / this.cell;
+    const fz = (z + this.size / 2) / this.cell;
+    const ix = Math.floor(fx), iz = Math.floor(fz);
+    if (ix < 0 || iz < 0 || ix >= GRID - 1 || iz >= GRID - 1) return -30;
+    const tx = fx - ix, tz = fz - iz;
+    const h00 = this.heights[iz * GRID + ix];
+    const h10 = this.heights[iz * GRID + ix + 1];
+    const h01 = this.heights[(iz + 1) * GRID + ix];
+    const h11 = this.heights[(iz + 1) * GRID + ix + 1];
+    return (
+      h00 * (1 - tx) * (1 - tz) +
+      h10 * tx * (1 - tz) +
+      h01 * (1 - tx) * tz +
+      h11 * tx * tz
+    );
+  }
+
+  /** Kõrgusgradient (normaali XZ-suund kollisiooni väljalükkeks) */
+  getGradient(x: number, z: number): [number, number] {
+    const e = this.cell;
+    const gx = (this.getHeight(x + e, z) - this.getHeight(x - e, z)) / (2 * e);
+    const gz = (this.getHeight(x, z + e) - this.getHeight(x, z - e)) / (2 * e);
+    return [gx, gz];
+  }
+}
+
+function distToPolyline(x: number, z: number, line: THREE.Vector2[]): number {
+  let best = Infinity;
+  for (let i = 0; i < line.length; i++) {
+    const a = line[i];
+    const b = line[(i + 1) % line.length];
+    const abx = b.x - a.x, abz = b.y - a.y;
+    const apx = x - a.x, apz = z - a.y;
+    const len2 = abx * abx + abz * abz;
+    const t = len2 > 0 ? clamp((apx * abx + apz * abz) / len2, 0, 1) : 0;
+    const dx = apx - abx * t, dz = apz - abz * t;
+    const d = dx * dx + dz * dz;
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
+}
