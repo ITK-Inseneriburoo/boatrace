@@ -2,7 +2,13 @@ import * as THREE from "three";
 import { mulberry32 } from "@shared/math";
 import type { PropDef } from "@shared/tracks";
 import type { ColliderSet } from "../../sim/Collisions";
-import { fitToSize, loadModel, wrapRotated } from "../../core/Assets";
+import { fitToSize, loadModel } from "../../core/Assets";
+import { shipLogoTexture, signTexture } from "../../core/Brand";
+import { buildFlagPole } from "./Flags";
+
+/** ITK osakonnad — laohoonete sildid (elektri/kütte/venti/vee projekteerimine) */
+const LADU_SILDID = ["ELEKTRIPROJEKTEERIMINE", "KÜTE JA JAHUTUS", "VENTILATSIOON", "VESI JA KANAL"];
+let laduCounter = 0;
 
 const wood = new THREE.MeshStandardMaterial({ color: 0x7a5c3b, roughness: 0.9 });
 const woodDark = new THREE.MeshStandardMaterial({ color: 0x5b452e, roughness: 0.95 });
@@ -271,13 +277,27 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
   // NB: Kenney laev on jässakam (laius ~37% pikkusest) — raadius selle järgi
   colliders.segments.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, r: Math.max(W / 2 + 0.6, L * 0.19) });
 
-  // Kenney kaubalaev, kui saadaval
+  // Kenney kaubalaev, kui saadaval + ITK logo külgedel
   void loadModel("ship-cargo-a").then((m) => {
     if (!m) return;
     fitToSize(m, L, "z");
     m.position.y -= 0.4;
     g.clear();
     g.add(m);
+    void shipLogoTexture().then((tex) => {
+      if (!tex) return;
+      const box = new THREE.Box3().setFromObject(m);
+      const halfW = (box.max.x - box.min.x) / 2;
+      for (const s of [-1, 1]) {
+        const logo = new THREE.Mesh(
+          new THREE.PlaneGeometry(L * 0.22, L * 0.11),
+          new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.6 }),
+        );
+        logo.position.set(s * (halfW * 0.86), 3.4, L * 0.12);
+        logo.rotation.y = (s * Math.PI) / 2;
+        g.add(logo);
+      }
+    });
   });
   return g;
 }
@@ -307,6 +327,18 @@ function buildLadu(scale: number, colliders: ColliderSet, world: THREE.Matrix4):
     door.position.set(W / 2 + 0.05, 2.1 * scale, -L / 3 + i * (L / 3));
     g.add(door);
   }
+  // ITK osakonnasilt pika külje peal
+  const silt = LADU_SILDID[laduCounter++ % LADU_SILDID.length];
+  void signTexture(silt).then((tex) => {
+    if (!tex) return;
+    const sign = new THREE.Mesh(
+      new THREE.PlaneGeometry(10 * scale, 2.5 * scale),
+      new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }),
+    );
+    sign.position.set(W / 2 + 0.15, H * 0.72, 0);
+    sign.rotation.y = Math.PI / 2;
+    g.add(sign);
+  });
   const p = new THREE.Vector3().applyMatrix4(world);
   colliders.circles.push({ x: p.x, z: p.z, r: Math.max(W, L) / 2 });
   return g;
@@ -330,6 +362,7 @@ export function buildProp(def: PropDef, colliders: ColliderSet, seed: number): T
     case "konteinerivirn": g = buildKonteinerivirn(scale, colliders, world, seed); break;
     case "kaubalaev": g = buildKaubalaev(scale, colliders, world); break;
     case "ladu": g = buildLadu(scale, colliders, world); break;
+    case "lipp": g = buildFlagPole(7 * scale); break;
   }
   g.position.set(def.x, 0, def.z);
   g.rotation.y = rot;

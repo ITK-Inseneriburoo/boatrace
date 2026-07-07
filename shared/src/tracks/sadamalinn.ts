@@ -104,6 +104,11 @@ export const sadamalinn: TrackDef = {
     { kind: "tuletorn", x: 258, z: 175, scale: 0.9 },
     { kind: "majakas", x: -175, z: 20 },
     { kind: "majakas", x: 120, z: -80 },
+    // ITK lipud kaidel
+    { kind: "lipp", x: -35, z: -258 },
+    { kind: "lipp", x: 95, z: -262 },
+    { kind: "lipp", x: 305, z: 55 },
+    { kind: "lipp", x: -5, z: 288 },
   ],
   treesPerIsland: 3,
   allowedWeathers: ["paike", "torm", "udu"],

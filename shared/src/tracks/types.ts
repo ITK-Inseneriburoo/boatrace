@@ -44,7 +44,8 @@ export type PropKind =
   | "kaubalaev"
   | "ladu" // laohoone
   | "majakas"
-  | "tuletorn";
+  | "tuletorn"
+  | "lipp"; // ITK lipumast
 
 export interface PropDef {
   kind: PropKind;

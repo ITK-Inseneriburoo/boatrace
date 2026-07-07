@@ -1,7 +1,7 @@
 /** Kõik UI stringid ühes kohas — teise keele lisamine = üks uus fail */
 const et = {
   "menu.title": "BOATRACE",
-  "menu.subtitle": "paadivõidusõit",
+  "menu.subtitle": "ITK Inseneribüroo paadivõidusõit",
   "menu.nimi": "Sinu nimi",
   "menu.nimi.placeholder": "Sisesta nimi…",
   "menu.varv": "Paadi värv",

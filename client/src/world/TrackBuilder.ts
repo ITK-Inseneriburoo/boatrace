@@ -8,6 +8,8 @@ import { buildRampMesh, rampSurfaceHeight, type RampInstance } from "./props/Ram
 import { buildObstacleMeshes, type PlacedObstacle } from "./props/Obstacles";
 import { buildVegetation } from "./props/Vegetation";
 import { buildProp } from "./props/Harbor";
+import { buildFlagPole, updateFlags } from "./props/Flags";
+import { bannerTexture } from "../core/Brand";
 import { fitToBox, loadModel, wrapRotated } from "../core/Assets";
 import type { ColliderSet } from "../sim/Collisions";
 
@@ -118,7 +120,35 @@ export class TrackWorld {
       place.position.set(g0.center.x, 0, g0.center.z);
       place.rotation.y = Math.atan2(g0.dirX, g0.dirZ);
       this.group.add(place);
+
+      // ITK bänner kaare alla
+      void bannerTexture().then((tex) => {
+        if (!tex) return;
+        const banner = new THREE.Mesh(
+          new THREE.PlaneGeometry(g0.width * 0.5, g0.width * 0.0625),
+          new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.7 }),
+        );
+        banner.position.y = 4.9;
+        // Esikülg lähenevate sõitjate poole (nad tulevad -Z suunast)
+        banner.rotation.y = Math.PI;
+        place.add(banner);
+      });
     });
+
+    // ITK lipumastid stardijoone kõrvale
+    {
+      const nx = g0.dirZ, nz = -g0.dirX;
+      for (const s of [-1, 1]) {
+        const flag = buildFlagPole(7);
+        flag.position.set(
+          g0.center.x + s * nx * (g0.width / 2 + 3.5),
+          0,
+          g0.center.z + s * nz * (g0.width / 2 + 3.5),
+        );
+        flag.rotation.y = Math.atan2(g0.dirX, g0.dirZ);
+        this.group.add(flag);
+      }
+    }
 
     // Rambid
     for (const rd of def.ramps) {
@@ -204,5 +234,6 @@ export class TrackWorld {
     this.punaneField.update(waves, time, nextGate);
     this.rohelineField.update(waves, time, nextGate);
     this.startField.update(waves, time, nextGate === 0 ? 0 : -1);
+    updateFlags(this.group, time);
   }
 }

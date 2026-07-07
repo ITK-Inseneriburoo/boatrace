@@ -88,6 +88,7 @@ export const saarestik: TrackDef = {
     { kind: "tuletorn", x: -352, z: -95, scale: 1.1 },
     { kind: "majakas", x: 150, z: 175 },
     { kind: "majakas", x: -195, z: -32 },
+    { kind: "lipp", x: 88, z: -78 },
   ],
   treesPerIsland: 26,
   allowedWeathers: ["paike", "torm", "udu"],
