@@ -105,9 +105,9 @@ export class BoatPhysics {
       // Glisseerimine: kiirusega nina kergelt üles
       const planingPitch = speedRatio * 0.06 * (input.throttle > 0 ? 1 : 0.3);
       const targetPitch = Math.atan2(hBow - hStern, s.hullLength) + planingPitch;
-      // Lained + kurvi sissepoole kaldumine
+      // Lained + kurvi sissepoole kaldumine (yawRate+ = vasakpööre → vasak külg alla)
       const targetRoll =
-        Math.atan2(hLeft - hRight, s.hullWidth) + this.yawRate * speedRatio * 0.55;
+        Math.atan2(hLeft - hRight, s.hullWidth) - this.yawRate * speedRatio * 0.55;
       this.pitch = damp(this.pitch, targetPitch, 6, dt);
       this.roll = damp(this.roll, clamp(targetRoll, -0.5, 0.5), 5, dt);
 
@@ -167,9 +167,10 @@ export class BoatPhysics {
     this.vel.z = fz * newFwd + rz * newLat;
 
     // --- Rool ---
+    // NB: yaw+ pöörab forward-vektori +X poole, mis on tagantvaates VASAKULE,
+    // seega parem (steer +1) = negatiivne yawRate.
     const steerAuthority = Math.sqrt(Math.max(speedRatio, 0.04)) * (this.airborne ? 0.15 : 1);
-    const targetYawRate =
-      input.steer * s.rudder * 1.5 * steerAuthority * (fwdSpeed < -0.5 ? -1 : 1);
+    const targetYawRate = -input.steer * s.rudder * 1.5 * steerAuthority;
     this.yawRate = damp(this.yawRate, targetYawRate, 7, dt);
     this.yaw += this.yawRate * dt;
 
