@@ -85,5 +85,13 @@ export interface TrackDef {
   treesPerIsland: number;
   /** hoovuse tugevus piki rada (m/s², jõekanjonile) */
   current?: number;
+  /** maastiku värvipalett (vaikimisi liiv/rohi/kalju) */
+  palette?: {
+    sand: number;
+    grass: number;
+    rock: number;
+    /** sellest kõrgusest ülespoole lumi */
+    snowAbove?: number;
+  };
   allowedWeathers: WeatherId[];
 }

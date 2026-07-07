@@ -74,9 +74,12 @@ export class Terrain {
     geo.rotateX(-Math.PI / 2);
     const pos = geo.getAttribute("position") as THREE.BufferAttribute;
     const colors = new Float32Array(pos.count * 3);
-    const sand = new THREE.Color(0xcbb389);
-    const grass = new THREE.Color(0x4a7440);
-    const rock = new THREE.Color(0x7d7a72);
+    const pal = track.palette;
+    const sand = new THREE.Color(pal?.sand ?? 0xcbb389);
+    const grass = new THREE.Color(pal?.grass ?? 0x4a7440);
+    const rock = new THREE.Color(pal?.rock ?? 0x7d7a72);
+    const snow = new THREE.Color(0xeef2f5);
+    const snowAbove = pal?.snowAbove ?? Infinity;
     const dark = new THREE.Color(0x2b3c38); // veealune
 
     for (let i = 0; i < pos.count; i++) {
@@ -90,6 +93,10 @@ export class Terrain {
       else if (h < 0.9) c.copy(sand);
       else if (h < 5.5) c.copy(grass).lerp(sand, clamp(1 - (h - 0.9) / 1.4, 0, 1) * 0.7);
       else c.copy(rock).lerp(grass, clamp(1 - (h - 5.5) / 2.5, 0, 1));
+      // Lumemütsid (fjord)
+      if (h > snowAbove) {
+        c.lerp(snow, clamp((h - snowAbove) / 4, 0, 1));
+      }
       // Kerge variatsioon
       const v = fbm2(x * 0.05, z * 0.05, 2, track.seed + 7) * 0.16;
       c.offsetHSL(0, 0, v - 0.08);
