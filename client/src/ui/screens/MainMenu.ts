@@ -26,6 +26,8 @@ export class MainMenu implements Screen {
   onSolo: (c: MenuChoices) => void = () => {};
   onMultiplayer: (c: MenuChoices) => void = () => {};
   onGraphics: (level: GraphicsLevel) => void = () => {};
+  /** Rajavalik muutus — taustamaailm saab kohe kaasa vahetuda */
+  onTrack: (id: TrackId) => void = () => {};
   multiplayerEnabled = false;
 
   private choices: MenuChoices = {
@@ -107,6 +109,7 @@ export class MainMenu implements Screen {
         chip.classList.add("selected");
         this.choices.track = id;
         this.persist();
+        this.onTrack(id);
       };
       trEls.push(chip);
       tracks.appendChild(chip);
@@ -186,6 +189,10 @@ export class MainMenu implements Screen {
 
   currentGraphics(): GraphicsLevel {
     return this.choices.graphics;
+  }
+
+  currentTrack(): TrackId {
+    return this.choices.track;
   }
 
   enableMultiplayer(): void {

@@ -94,7 +94,8 @@ export class Game {
     this.engine.scene.add(this.ocean.group);
     this.chaseCam = new ChaseCamera(this.engine.camera);
 
-    this.track = new TrackWorld(getTrack("saarestik"));
+    // Taustamaailm = menüüs viimati valitud rada
+    this.track = new TrackWorld(getTrack(this.menu.currentTrack()));
     this.engine.scene.add(this.track.group);
     this.engine.scene.add(this.effects.group);
     this.engine.scene.add(this.rain.points);
@@ -132,6 +133,9 @@ export class Game {
     this.menu.onSolo = (c) => this.startSolo(c);
     this.menu.onMultiplayer = (c) => this.connectMultiplayer(c);
     this.menu.onGraphics = (level) => this.applyGraphics(level);
+    this.menu.onTrack = (id) => {
+      if (this.state === "menu") this.setTrack(id);
+    };
     this.menu.enableMultiplayer();
     this.applyGraphics(this.menu.currentGraphics());
     this.results.onRestart = () => {
@@ -280,6 +284,8 @@ export class Game {
         this.state = "room";
         this.screens.show(this.roomScreen);
       }
+      // Toas näidatakse taustal valitud rada
+      if (this.state === "room") this.setTrack(m.room.config.trackId);
       this.syncRemoteBoatRoster();
     });
     net.on("leftRoom", () => {
