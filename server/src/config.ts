@@ -5,6 +5,6 @@ function intEnv(name: string, def: number): number {
 }
 
 export const config = {
-  port: intEnv("PORT", 8080),
+  port: intEnv("PORT", 8090),
   staticDir: process.env.STATIC_DIR ?? new URL("../../client/dist", import.meta.url).pathname,
 };

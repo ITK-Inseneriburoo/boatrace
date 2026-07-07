@@ -39,7 +39,7 @@ Vajalik: Node.js 20+.
 
 ```bash
 npm install
-npm run dev        # klient (Vite, :5173) + server (:8080) korraga
+npm run dev        # klient (Vite, :5173) + server (:8090) korraga
 ```
 
 Ava http://localhost:5173 — Vite proksib WebSocketi serverisse.
@@ -59,12 +59,12 @@ brauseris selle masina aadressi. Üks port, üks protsess:
 ```bash
 npm install
 npm run build            # ehitab kliendi client/dist alla
-npm start                # serveerib mängu + WebSocketi pordil 8080
+npm start                # serveerib mängu + WebSocketi pordil 8090
 # või muu port:
 PORT=9000 npm start
 ```
 
-Seejärel jaga link: `http://<masina-ip>:8080`
+Seejärel jaga link: `http://<masina-ip>:8090`
 
 Kui ees on ettevõtte HTTPS-proksi, töötab WSS automaatselt (klient ühendub
 alati `location.host` kaudu).
