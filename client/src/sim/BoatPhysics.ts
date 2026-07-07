@@ -170,7 +170,9 @@ export class BoatPhysics {
     // NB: yaw+ pöörab forward-vektori +X poole, mis on tagantvaates VASAKULE,
     // seega parem (steer +1) = negatiivne yawRate.
     const steerAuthority = Math.sqrt(Math.max(speedRatio, 0.04)) * (this.airborne ? 0.15 : 1);
-    const targetYawRate = -input.steer * s.rudder * 1.5 * steerAuthority;
+    // Tagurdades peegeldub roolitunnetus nagu autol (ahter läheb klahvi suunas)
+    const reversing = fwdSpeed < -0.5 ? -1 : 1;
+    const targetYawRate = -input.steer * s.rudder * 1.5 * steerAuthority * reversing;
     this.yawRate = damp(this.yawRate, targetYawRate, 7, dt);
     this.yaw += this.yawRate * dt;
 
