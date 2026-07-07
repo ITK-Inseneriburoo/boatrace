@@ -3,6 +3,7 @@ import { t } from "../i18n/et";
 import type { RoomStateMsg } from "@shared/protocol";
 import type { TrackId, VehicleId, WeatherId } from "@shared/types";
 import { VEHICLES, VEHICLE_IDS } from "@shared/vehicles";
+import { TRACKS, TRACK_IDS } from "@shared/tracks";
 import { WEATHERS } from "../../world/WeatherPresets";
 
 /** Võistlustoa ekraan: mängijad, sõidukivalik, hosti seaded, chat */
@@ -20,6 +21,7 @@ export class RoomScreen implements Screen {
   private titleEl: HTMLElement;
   private playersWrap: HTMLElement;
   private vehiclesWrap: HTMLElement;
+  private tracksWrap: HTMLElement;
   private weatherWrap: HTMLElement;
   private lapsWrap: HTMLElement;
   private readyBtn: HTMLButtonElement;
@@ -32,6 +34,7 @@ export class RoomScreen implements Screen {
     this.titleEl = h("h2", { style: "margin:0" });
     this.playersWrap = h("div", {});
     this.vehiclesWrap = h("div", { class: "row" });
+    this.tracksWrap = h("div", { class: "row" });
     this.weatherWrap = h("div", { class: "row" });
     this.lapsWrap = h("div", { class: "row" });
 
@@ -74,6 +77,7 @@ export class RoomScreen implements Screen {
           this.titleEl,
           this.playersWrap,
           h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), this.vehiclesWrap),
+          h("div", { class: "field" }, h("label", {}, t("menu.rada")), this.tracksWrap),
           h("div", { class: "field" }, h("label", {}, t("menu.ilm")), this.weatherWrap),
           h("div", { class: "field" }, h("label", {}, t("menu.ringe")), this.lapsWrap),
           h("div", { class: "field", style: "width:100%" }, this.chatLog, this.chatInput),
@@ -138,6 +142,22 @@ export class RoomScreen implements Screen {
       if (me?.vehicle === id) chip.classList.add("selected");
       chip.onclick = () => this.onVehicle(id);
       this.vehiclesWrap.appendChild(chip);
+    }
+
+    // Rada (ainult host saab muuta)
+    this.tracksWrap.replaceChildren();
+    for (const id of TRACK_IDS) {
+      const chip = h("div", { class: "chip" }, TRACKS[id]!.nimi);
+      chip.title = TRACKS[id]!.kirjeldus;
+      if (room.config.trackId === id) chip.classList.add("selected");
+      if (isHost) {
+        chip.onclick = () =>
+          this.onConfigure(id, room.config.weatherId, room.config.laps);
+      } else {
+        chip.style.cursor = "default";
+        chip.style.opacity = "0.7";
+      }
+      this.tracksWrap.appendChild(chip);
     }
 
     // Ilm (ainult host saab muuta)

@@ -2,15 +2,20 @@ import { h, type Screen } from "../ScreenManager";
 import { t } from "../i18n/et";
 import { PLAYER_COLORS } from "@shared/constants";
 import { VEHICLES, VEHICLE_IDS } from "@shared/vehicles";
-import type { VehicleId, WeatherId } from "@shared/types";
+import { TRACKS, TRACK_IDS } from "@shared/tracks";
+import type { TrackId, VehicleId, WeatherId } from "@shared/types";
 import { WEATHERS } from "../../world/WeatherPresets";
+
+export type GraphicsLevel = "korge" | "keskmine" | "madal";
 
 export interface MenuChoices {
   name: string;
   color: number;
   vehicle: VehicleId;
+  track: TrackId;
   weather: WeatherId;
   laps: number;
+  graphics: GraphicsLevel;
 }
 
 const LS_KEY = "boatrace.menu";
@@ -20,14 +25,17 @@ export class MainMenu implements Screen {
   readonly el: HTMLElement;
   onSolo: (c: MenuChoices) => void = () => {};
   onMultiplayer: (c: MenuChoices) => void = () => {};
+  onGraphics: (level: GraphicsLevel) => void = () => {};
   multiplayerEnabled = false;
 
   private choices: MenuChoices = {
     name: "",
     color: PLAYER_COLORS[0],
     vehicle: "kiirpaat",
+    track: "saarestik",
     weather: "paike",
     laps: 3,
+    graphics: "korge",
   };
   private nameInput: HTMLInputElement;
   private mpButton: HTMLButtonElement;
@@ -87,6 +95,23 @@ export class MainMenu implements Screen {
       vehicles.appendChild(card);
     }
 
+    // Rajavalik
+    const tracks = h("div", { class: "row" });
+    const trEls: HTMLElement[] = [];
+    for (const id of TRACK_IDS) {
+      const chip = h("div", { class: "chip" }, TRACKS[id]!.nimi);
+      chip.title = TRACKS[id]!.kirjeldus;
+      if (id === this.choices.track) chip.classList.add("selected");
+      chip.onclick = () => {
+        trEls.forEach((e) => e.classList.remove("selected"));
+        chip.classList.add("selected");
+        this.choices.track = id;
+        this.persist();
+      };
+      trEls.push(chip);
+      tracks.appendChild(chip);
+    }
+
     // Ilmavalik
     const weathers = h("div", { class: "row" });
     const wEls: HTMLElement[] = [];
@@ -101,6 +126,23 @@ export class MainMenu implements Screen {
       };
       wEls.push(chip);
       weathers.appendChild(chip);
+    }
+
+    // Graafikatase
+    const gfx = h("div", { class: "row" });
+    const gEls: HTMLElement[] = [];
+    for (const level of ["korge", "keskmine", "madal"] as GraphicsLevel[]) {
+      const chip = h("div", { class: "chip" }, t(`menu.grafika.${level}` as never));
+      if (level === this.choices.graphics) chip.classList.add("selected");
+      chip.onclick = () => {
+        gEls.forEach((e) => e.classList.remove("selected"));
+        chip.classList.add("selected");
+        this.choices.graphics = level;
+        this.persist();
+        this.onGraphics(level);
+      };
+      gEls.push(chip);
+      gfx.appendChild(chip);
     }
 
     const soloBtn = h("button", { class: "primary" }, t("menu.proovisoit")) as HTMLButtonElement;
@@ -129,11 +171,21 @@ export class MainMenu implements Screen {
           h("div", { class: "field", style: "width:280px" }, h("label", {}, t("menu.nimi")), this.nameInput),
           h("div", { class: "field" }, h("label", {}, t("menu.varv")), swatches),
           h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles),
-          h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
+          h("div", { class: "field" }, h("label", {}, t("menu.rada")), tracks),
+          h(
+            "div",
+            { class: "row", style: "gap:26px" },
+            h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
+            h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
+          ),
           h("div", { class: "row", style: "margin-top:8px" }, soloBtn, this.mpButton),
         ),
       ),
     );
+  }
+
+  currentGraphics(): GraphicsLevel {
+    return this.choices.graphics;
   }
 
   enableMultiplayer(): void {

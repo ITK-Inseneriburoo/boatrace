@@ -30,6 +30,9 @@ export class BoatPhysics {
   speed = 0;
   /** gaasi hetkeväärtus heli jaoks */
   throttle = 0;
+  /** hoovus (m/s²) — jõekanjon lükkab piki rada */
+  currentX = 0;
+  currentZ = 0;
 
   /** Maandumise event (impact = kukkumiskiirus m/s) */
   onLanding: (impact: number) => void = () => {};
@@ -169,6 +172,12 @@ export class BoatPhysics {
       input.steer * s.rudder * 1.5 * steerAuthority * (fwdSpeed < -0.5 ? -1 : 1);
     this.yawRate = damp(this.yawRate, targetYawRate, 7, dt);
     this.yaw += this.yawRate * dt;
+
+    // --- Hoovus ---
+    if (!this.airborne) {
+      this.vel.x += this.currentX * dt;
+      this.vel.z += this.currentZ * dt;
+    }
 
     // --- Integreeri ---
     this.pos.x += this.vel.x * dt;

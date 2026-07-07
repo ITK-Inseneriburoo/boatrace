@@ -17,7 +17,7 @@ import { TICK_RATE } from "@shared/constants";
 import type { TrackId } from "@shared/types";
 import type { RoomStateMsg } from "@shared/protocol";
 import { ScreenManager } from "./ui/ScreenManager";
-import { MainMenu, type MenuChoices } from "./ui/screens/MainMenu";
+import { MainMenu, type GraphicsLevel, type MenuChoices } from "./ui/screens/MainMenu";
 import { ResultsScreen, type ResultRow } from "./ui/screens/Results";
 import { LobbyBrowser } from "./ui/screens/LobbyBrowser";
 import { RoomScreen } from "./ui/screens/RoomScreen";
@@ -131,7 +131,9 @@ export class Game {
 
     this.menu.onSolo = (c) => this.startSolo(c);
     this.menu.onMultiplayer = (c) => this.connectMultiplayer(c);
+    this.menu.onGraphics = (level) => this.applyGraphics(level);
     this.menu.enableMultiplayer();
+    this.applyGraphics(this.menu.currentGraphics());
     this.results.onRestart = () => {
       if (this.choices) this.startSolo(this.choices);
     };
@@ -195,6 +197,21 @@ export class Game {
     this.rain.setEnabled(w.rainCount > 0);
   }
 
+  private applyGraphics(level: GraphicsLevel): void {
+    const cfg = {
+      korge: { pixelRatio: 1.5, shadows: true, shadowRes: 2048 },
+      keskmine: { pixelRatio: 1.15, shadows: true, shadowRes: 1024 },
+      madal: { pixelRatio: 1.0, shadows: false, shadowRes: 512 },
+    }[level];
+    this.engine.setPixelRatioCap(cfg.pixelRatio);
+    this.sky.sunLight.castShadow = cfg.shadows;
+    if (cfg.shadows) {
+      this.sky.sunLight.shadow.mapSize.set(cfg.shadowRes, cfg.shadowRes);
+      this.sky.sunLight.shadow.map?.dispose();
+      this.sky.sunLight.shadow.map = null;
+    }
+  }
+
   setTrack(id: TrackId): void {
     if (this.track.def.id === id) return;
     this.engine.scene.remove(this.track.group);
@@ -210,6 +227,7 @@ export class Game {
   private startSolo(c: MenuChoices): void {
     this.mode = "solo";
     this.choices = c;
+    this.setTrack(c.track);
     this.applyWeather(WEATHERS[c.weather]);
     this.spawnOwnBoat(c.vehicle, c.color, 0);
 
@@ -513,6 +531,19 @@ export class Game {
 
     if (this.state === "racing" && this.boat && this.race) {
       if (this.input.respawnPressed) this.respawn();
+      // Hoovus (jõekanjon)
+      const cur = this.track.def.current ?? 0;
+      if (cur > 0) {
+        const [tx, tz] = this.track.nearestTangent(
+          this.boat.physics.pos.x,
+          this.boat.physics.pos.z,
+        );
+        this.boat.physics.currentX = tx * cur;
+        this.boat.physics.currentZ = tz * cur;
+      } else {
+        this.boat.physics.currentX = 0;
+        this.boat.physics.currentZ = 0;
+      }
       this.boat.update(
         { throttle: this.input.throttle, steer: this.input.steer, slide: this.input.slide },
         this.weather.waves,
