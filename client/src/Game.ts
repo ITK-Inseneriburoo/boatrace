@@ -24,6 +24,11 @@ import { RoomScreen } from "./ui/screens/RoomScreen";
 import { Hud } from "./ui/screens/Hud";
 import { t } from "./ui/i18n/et";
 import type { MinimapDot } from "./ui/Minimap";
+import { AudioEngine } from "./audio/AudioEngine";
+import { EngineSound } from "./audio/EngineSound";
+import { Sfx } from "./audio/Sfx";
+import { VEHICLES } from "@shared/vehicles";
+import { clamp } from "@shared/math";
 
 type GameState = "menu" | "lobby" | "room" | "countdown" | "racing" | "results";
 
@@ -57,6 +62,13 @@ export class Game {
   private finishTimer = 0;
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
+
+  // --- Heli ---
+  private audio = new AudioEngine();
+  private sfx = new Sfx(this.audio);
+  private ownEngine: EngineSound | null = null;
+  private remoteEngines = new Map<string, EngineSound>();
+  private remoteDist = new Map<string, number>();
 
   // --- Võrgumäng ---
   private net: NetClient | null = null;
@@ -93,6 +105,11 @@ export class Game {
     this.engine.scene.add(this.gateArrow);
 
     this.applyWeather(WEATHERS.paike);
+
+    // AudioContext vajab kasutaja žesti
+    window.addEventListener("pointerdown", () => this.audio.ensure());
+    window.addEventListener("keydown", () => this.audio.ensure());
+    this.sky.onLightning = (delay) => this.sfx.thunder(delay);
 
     // --- UI ---
     this.screens = new ScreenManager(uiRoot);
@@ -160,6 +177,7 @@ export class Game {
     this.sky.applyPreset(w);
     this.ocean.applyWeather(w);
     if (this.sky.envCube) this.ocean.setEnvironment(this.sky.envCube, this.sky.sunDir);
+    this.audio.setAmbient(w.id);
   }
 
   setTrack(id: TrackId): void {
@@ -181,6 +199,7 @@ export class Game {
     this.spawnOwnBoat(c.vehicle, c.color, 0);
 
     this.race = new RaceLogic(this.track, c.laps);
+    this.race.onGate = () => this.sfx.chime();
     this.race.onLap = (_lap, ms) => this.hud.flashCenter(`${(ms / 1000).toFixed(1)}s`, 1.6);
     this.race.onFinish = () => {
       this.hud.flashCenter(t("hud.finis"), 2.5);
@@ -274,6 +293,7 @@ export class Game {
       this.state = "results";
       this.hud.hide();
       this.gateArrow.visible = false;
+      this.stopRaceAudio();
       this.screens.show(this.results);
     });
     net.on("raceAborted", () => {
@@ -296,7 +316,7 @@ export class Game {
     const mySlot = spawns[this.net.playerId ?? ""] ?? 0;
     this.spawnOwnBoat(me?.vehicle ?? "kiirpaat", me?.color ?? 0xe63946, mySlot);
 
-    // Kaugpaadid stardikohtadele
+    // Kaugpaadid stardikohtadele (+ ruumiline mootoriheli)
     this.clearRemoteBoats();
     for (const p of this.room.players) {
       if (p.id === this.net.playerId) continue;
@@ -306,10 +326,17 @@ export class Game {
       rb.mesh.rotation.y = sp.yaw;
       this.remoteBoats.set(p.id, rb);
       this.engine.scene.add(rb.mesh);
+      this.remoteEngines.set(
+        p.id,
+        new EngineSound(this.audio, VEHICLES[p.vehicle].tyyp === "jett" ? 76 : 52, true),
+      );
     }
 
     this.race = new RaceLogic(this.track, config.laps);
-    this.race.onGate = (gate) => this.net?.send({ type: "gate", gate });
+    this.race.onGate = (gate) => {
+      this.net?.send({ type: "gate", gate });
+      this.sfx.chime();
+    };
 
     this.mpStartsAt = startsAt;
     this.mpStarted = false;
@@ -329,6 +356,7 @@ export class Game {
     this.hud.hide();
     this.gateArrow.visible = false;
     this.clearRemoteBoats();
+    this.stopRaceAudio();
     if (this.room) this.roomScreen.setRoom(this.room);
     this.screens.show(this.roomScreen);
   }
@@ -348,6 +376,9 @@ export class Game {
   private clearRemoteBoats(): void {
     for (const rb of this.remoteBoats.values()) rb.dispose();
     this.remoteBoats.clear();
+    for (const e of this.remoteEngines.values()) e.dispose();
+    this.remoteEngines.clear();
+    this.remoteDist.clear();
   }
 
   // ------------------------------------------------------------------
@@ -363,8 +394,24 @@ export class Game {
     this.boat.physics.surfaceOverride = this.track.surfaceOverride;
     this.boat.physics.onLanding = (impact) => {
       this.chaseCam.addTrauma(Math.min(impact * 0.06, 0.5));
+      this.sfx.splash(impact * 0.12);
     };
     this.chaseCam.snapTo(this.boat.physics);
+
+    this.ownEngine?.dispose();
+    this.ownEngine = new EngineSound(
+      this.audio,
+      VEHICLES[vehicle].tyyp === "jett" ? 76 : 52,
+      false,
+    );
+  }
+
+  private stopRaceAudio(): void {
+    this.ownEngine?.dispose();
+    this.ownEngine = null;
+    for (const e of this.remoteEngines.values()) e.dispose();
+    this.remoteEngines.clear();
+    this.remoteDist.clear();
   }
 
   private toMenu(): void {
@@ -373,6 +420,7 @@ export class Game {
     this.hud.hide();
     this.gateArrow.visible = false;
     this.clearRemoteBoats();
+    this.stopRaceAudio();
     this.screens.show(this.menu);
   }
 
@@ -381,6 +429,7 @@ export class Game {
     this.state = "results";
     this.hud.hide();
     this.gateArrow.visible = false;
+    this.stopRaceAudio();
     this.results.setResults(
       [
         {
@@ -425,6 +474,7 @@ export class Game {
       if (n !== this.lastCountShown && n >= 1 && n <= 3) {
         this.lastCountShown = n;
         this.hud.flashCenter(String(n), 0.9);
+        this.sfx.countBlip();
       }
       this.boat.update({ throttle: 0, steer: 0, slide: false }, this.weather.waves, this.engine.simTime, dt);
       const canStart = this.mode === "mp" ? remaining <= 0 || this.mpStarted : remaining <= 0;
@@ -432,6 +482,7 @@ export class Game {
         this.state = "racing";
         this.race!.start();
         this.hud.flashCenter(t("hud.start"), 1);
+        this.sfx.countBlip(true);
       }
       return;
     }
@@ -445,7 +496,10 @@ export class Game {
         dt,
       );
       const hit = resolveCollisions(this.boat.physics, this.track.colliders, this.track.terrain);
-      if (hit && !hit.soft) this.chaseCam.addTrauma(Math.min(hit.impact * 0.05, 0.6));
+      if (hit && !hit.soft) {
+        this.chaseCam.addTrauma(Math.min(hit.impact * 0.05, 0.6));
+        this.sfx.thunk(hit.impact * 0.12);
+      }
 
       // Paat-paadi vastu: pehme ringtõrjumine ainult oma paadile
       for (const rb of this.remoteBoats.values()) {
@@ -512,6 +566,41 @@ export class Game {
     if (this.net && this.remoteBoats.size) {
       const now = this.net.serverNow();
       for (const rb of this.remoteBoats.values()) rb.update(now);
+    }
+
+    // --- Heli ---
+    this.audio.updateListener(this.engine.camera);
+    this.audio.update(frameDt);
+    if (this.ownEngine && this.boat && (this.state === "racing" || this.state === "countdown")) {
+      const p = this.boat.physics;
+      this.ownEngine.update(
+        frameDt,
+        this.state === "countdown" ? 0 : Math.abs(this.input.throttle),
+        clamp(p.speed / p.stats.topSpeed, 0, 1),
+        p.airborne,
+      );
+    }
+    if (this.state === "racing" || this.state === "countdown") {
+      const cam = this.engine.camera.position;
+      for (const [id, eng] of this.remoteEngines) {
+        const rb = this.remoteBoats.get(id);
+        if (!rb) continue;
+        const dist = Math.hypot(rb.x - cam.x, rb.z - cam.z);
+        const prev = this.remoteDist.get(id) ?? dist;
+        this.remoteDist.set(id, dist);
+        const radialVel = frameDt > 0 ? (dist - prev) / frameDt : 0;
+        const doppler = clamp(1 - radialVel / 120, 0.85, 1.15);
+        const topSpeed = VEHICLES[rb.vehicle].topSpeed;
+        const ratio = clamp(rb.speed / topSpeed, 0, 1);
+        eng.update(
+          frameDt,
+          ratio,
+          ratio,
+          false,
+          { x: rb.x, y: rb.mesh.position.y, z: rb.z },
+          doppler,
+        );
+      }
     }
 
     const nextGate =
