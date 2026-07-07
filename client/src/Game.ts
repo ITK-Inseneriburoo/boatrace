@@ -537,6 +537,14 @@ export class Game {
   private update(dt: number): void {
     this.sky.update(dt);
 
+    // H — juhtimise legend sõidu/loenduse ajal
+    if (
+      (this.state === "racing" || this.state === "countdown") &&
+      this.input.wasPressed("KeyH")
+    ) {
+      this.hud.toggleLegend();
+    }
+
     if (this.state === "countdown") {
       let remaining: number;
       if (this.mode === "mp") {

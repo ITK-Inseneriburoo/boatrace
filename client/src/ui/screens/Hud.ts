@@ -1,6 +1,7 @@
 import { h } from "../ScreenManager";
 import { t } from "../i18n/et";
 import { Minimap, type MinimapDot } from "../Minimap";
+import { buildLegend } from "../Legend";
 import type { TrackWorld } from "../../world/TrackBuilder";
 
 export function formatMs(ms: number): string {
@@ -24,6 +25,7 @@ export class Hud {
   private hintEl: HTMLElement;
   private minimap: Minimap | null = null;
   private centerTimer = 0;
+  private legendEl: HTMLElement;
 
   constructor() {
     this.speedNum = h("div", { class: "num" }, "0");
@@ -34,9 +36,18 @@ export class Hud {
     this.centerEl = h("div", { class: "hud-item", id: "hud-center" });
     this.hintEl = h("div", { class: "hud-item", id: "hud-hint" }, t("hud.respawn"));
     this.wrongEl.style.display = "none";
+    this.legendEl = h(
+      "div",
+      {
+        class: "hud-item panel",
+        style: "right:24px;top:80px;padding:16px 20px;display:none",
+      },
+      buildLegend(),
+    );
     this.el = h(
       "div",
       { id: "hud" },
+      this.legendEl,
       h(
         "div",
         { class: "hud-item", id: "hud-speed" },
@@ -64,6 +75,11 @@ export class Hud {
   }
   hide(): void {
     this.el.style.display = "none";
+    this.legendEl.style.display = "none";
+  }
+
+  toggleLegend(): void {
+    this.legendEl.style.display = this.legendEl.style.display === "none" ? "" : "none";
   }
 
   /** Vaatlejavaade: peida sõitjaspetsiifiline (kiirus, ring, ajad, koht) */

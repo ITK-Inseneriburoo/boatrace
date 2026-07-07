@@ -1,5 +1,6 @@
 import { h, type Screen } from "../ScreenManager";
 import { t } from "../i18n/et";
+import { buildLegend } from "../Legend";
 import { PLAYER_COLORS } from "@shared/constants";
 import { VEHICLES, VEHICLE_IDS } from "@shared/vehicles";
 import { TRACKS, TRACK_IDS } from "@shared/tracks";
@@ -187,6 +188,18 @@ export class MainMenu implements Screen {
             h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
           ),
           h("div", { class: "row", style: "margin-top:8px" }, soloBtn, this.mpButton),
+          (() => {
+            const details = h("details", { style: "width:100%;color:var(--text)" });
+            const summary = h(
+              "summary",
+              { style: "cursor:pointer;color:var(--text-dim);font-size:.85rem" },
+              t("menu.juhtimine"),
+            );
+            details.appendChild(summary);
+            const inner = h("div", { style: "margin-top:10px" }, buildLegend());
+            details.appendChild(inner);
+            return details;
+          })(),
         ),
       ),
     );

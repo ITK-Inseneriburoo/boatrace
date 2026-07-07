@@ -27,7 +27,8 @@ const et = {
   "hud.valesuund": "VALE SUUND!",
   "hud.start": "START!",
   "hud.finis": "FINIŠ!",
-  "hud.respawn": "R — tagasi rajale",
+  "hud.respawn": "R — tagasi rajale · H — juhtimine",
+  "menu.juhtimine": "Juhtimine (klahvid)",
 
   "tulemused.pealkiri": "Tulemused",
   "tulemused.koht": "Koht",
