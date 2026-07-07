@@ -58,5 +58,6 @@ export function buildRampMesh(r: RampInstance): THREE.Group {
 
   g.position.set(r.x, 0, r.z);
   g.rotation.y = Math.atan2(r.dirX, r.dirZ);
+  // NB: Kenney ramp-wide venib jalajäljele skaleerides katki — jääb protseduuriline
   return g;
 }

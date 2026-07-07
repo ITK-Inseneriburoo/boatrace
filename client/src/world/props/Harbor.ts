@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { mulberry32 } from "@shared/math";
 import type { PropDef } from "@shared/tracks";
 import type { ColliderSet } from "../../sim/Collisions";
+import { fitToSize, loadModel, wrapRotated } from "../../core/Assets";
 
 const wood = new THREE.MeshStandardMaterial({ color: 0x7a5c3b, roughness: 0.9 });
 const woodDark = new THREE.MeshStandardMaterial({ color: 0x5b452e, roughness: 0.95 });
@@ -111,37 +112,80 @@ function buildMajakas(scale: number, colliders: ColliderSet, world: THREE.Matrix
   return g;
 }
 
-/** Portaalkraana (sadamalinn) */
+/** Portaalkraana (sadamalinn) — sõrestikjalad, vagonett, rippuv konteiner */
 function buildKraana(scale: number, colliders: ColliderSet, world: THREE.Matrix4): THREE.Group {
   const g = new THREE.Group();
   const H = 18 * scale, W = 9 * scale;
+  const warn = new THREE.MeshStandardMaterial({ color: 0xd9822b, roughness: 0.6 });
+
   for (const s of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.9, H, 0.9), steel);
-    leg.position.set((s * W) / 2, H / 2, 0);
-    leg.castShadow = true;
-    g.add(leg);
+    // A-jalg: kaks posti + põiktalad
+    for (const zoff of [-1.6, 1.6]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.65, H, 0.65), steel);
+      leg.position.set((s * W) / 2, H / 2, zoff);
+      leg.castShadow = true;
+      g.add(leg);
+    }
+    for (let i = 1; i <= 3; i++) {
+      const cross = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 3.9), steel);
+      cross.position.set((s * W) / 2, (H * i) / 3.4, 0);
+      g.add(cross);
+      const diag = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 4.4), steel);
+      diag.position.set((s * W) / 2, (H * (i - 0.5)) / 3.4, 0);
+      diag.rotation.x = i % 2 ? 0.7 : -0.7;
+      g.add(diag);
+    }
+    // Alusvanker + rattad
+    const bogie = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.7, 4.6), warn);
+    bogie.position.set((s * W) / 2, 0.5, 0);
+    g.add(bogie);
   }
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(W + 4, 1.4, 1.4), rust);
-  beam.position.y = H;
-  beam.castShadow = true;
-  g.add(beam);
-  const jib = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.1, 14 * scale), rust);
-  jib.position.set(0, H + 1.1, 5 * scale);
-  jib.castShadow = true;
-  g.add(jib);
-  const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2, 2.4), whitePaint);
-  cab.position.set(0, H - 2, 0.8);
+
+  // Peatala (kahekordne) + otste hoiatustriibud
+  for (const zoff of [-0.9, 0.9]) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(W + 7, 1.5, 1.1), rust);
+    beam.position.set(0, H, zoff);
+    beam.castShadow = true;
+    g.add(beam);
+  }
+  for (const s of [-1, 1]) {
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.6, 3.0), warn);
+    tip.position.set((s * (W + 7)) / 2, H, 0);
+    g.add(tip);
+  }
+
+  // Vagonett tala peal + trossid + rippuv konteiner
+  const trolley = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.1, 2.6), warn);
+  trolley.position.set(W * 0.18, H + 1.2, 0);
+  g.add(trolley);
+  const drop = H * 0.42;
+  for (const [cx, cz] of [[-0.8, -0.9], [0.8, -0.9], [-0.8, 0.9], [0.8, 0.9]] as const) {
+    const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, drop, 4), steel);
+    cable.position.set(W * 0.18 + cx, H - drop / 2 + 0.6, cz);
+    g.add(cable);
+  }
+  const hangingBox = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 2.5, 5.9),
+    new THREE.MeshStandardMaterial({ color: 0x1f618d, roughness: 0.75, metalness: 0.15 }),
+  );
+  hangingBox.position.set(W * 0.18, H - drop - 0.6, 0);
+  hangingBox.castShadow = true;
+  g.add(hangingBox);
+
+  // Juhikabiin tala küljes
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.1, 2.4), whitePaint);
+  cab.position.set(-W * 0.22, H - 1.8, 1.9);
   g.add(cab);
-  // Trossid + konks
-  const hook = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.7), steel);
-  hook.position.set(0, H - 6, 9 * scale);
-  g.add(hook);
-  const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6.6, 4), steel);
-  cable.position.set(0, H - 2.8, 9 * scale);
-  g.add(cable);
+  const cabGlass = new THREE.Mesh(
+    new THREE.BoxGeometry(2.0, 0.9, 0.12),
+    new THREE.MeshStandardMaterial({ color: 0x0c1a24, roughness: 0.1, metalness: 0.4 }),
+  );
+  cabGlass.position.set(-W * 0.22, H - 1.6, 3.08);
+  g.add(cabGlass);
+
   for (const s of [-1, 1]) {
     const p = new THREE.Vector3((s * W) / 2, 0, 0).applyMatrix4(world);
-    colliders.circles.push({ x: p.x, z: p.z, r: 1.2 });
+    colliders.circles.push({ x: p.x, z: p.z, r: 2.6 });
   }
   return g;
 }
@@ -177,6 +221,14 @@ function buildKonteinerivirn(scale: number, colliders: ColliderSet, world: THREE
   }
   const p = new THREE.Vector3().applyMatrix4(world);
   colliders.circles.push({ x: p.x, z: p.z, r: Math.max(CL, CW * rows) * 0.75 });
+
+  // Kenney konteinerihunnik, kui saadaval
+  void loadModel("cargo-pile-a").then((m) => {
+    if (!m) return;
+    fitToSize(m, CL * 1.9, "z");
+    g.clear();
+    g.add(m);
+  });
   return g;
 }
 
@@ -216,7 +268,17 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
   }
   const a = new THREE.Vector3(0, 0, -L / 2 - 2).applyMatrix4(world);
   const b = new THREE.Vector3(0, 0, L / 2 + 5).applyMatrix4(world);
-  colliders.segments.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, r: W / 2 + 0.6 });
+  // NB: Kenney laev on jässakam (laius ~37% pikkusest) — raadius selle järgi
+  colliders.segments.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, r: Math.max(W / 2 + 0.6, L * 0.19) });
+
+  // Kenney kaubalaev, kui saadaval
+  void loadModel("ship-cargo-a").then((m) => {
+    if (!m) return;
+    fitToSize(m, L, "z");
+    m.position.y -= 0.4;
+    g.clear();
+    g.add(m);
+  });
   return g;
 }
 

@@ -8,6 +8,7 @@ import { buildRampMesh, rampSurfaceHeight, type RampInstance } from "./props/Ram
 import { buildObstacleMeshes, type PlacedObstacle } from "./props/Obstacles";
 import { buildVegetation } from "./props/Vegetation";
 import { buildProp } from "./props/Harbor";
+import { fitToBox, loadModel, wrapRotated } from "../core/Assets";
 import type { ColliderSet } from "../sim/Collisions";
 
 export interface Gate {
@@ -98,6 +99,26 @@ export class TrackWorld {
     this.rohelineField = new BuoyField(roheline, 0x1b9e4b, 0x7dffab);
     this.startField = new BuoyField(start, 0xf2f2f2, 0xfff8c4);
     this.group.add(this.punaneField.mesh, this.rohelineField.mesh, this.startField.mesh);
+
+    // Finišikaar stardijoonele (Kenney gate-finish, kui saadaval)
+    const g0 = this.gates[0];
+    void loadModel("gate-finish").then((m) => {
+      if (!m) return;
+      // Kaare ava peab jääma risti sõidusuunaga: pikem horisontaaltelg = sild
+      const box = new THREE.Box3().setFromObject(m);
+      const dims = new THREE.Vector3();
+      box.getSize(dims);
+      const spanRot = dims.z > dims.x ? Math.PI / 2 : 0;
+      const wrapped = wrapRotated(m, spanRot);
+      // Lai värav ühtlase skaalaga veniks 20m kõrguseks — piira kõrgus
+      fitToBox(wrapped, g0.width * 1.05, 7.5, 2.6);
+      wrapped.position.y -= 0.25;
+      const place = new THREE.Group();
+      place.add(wrapped);
+      place.position.set(g0.center.x, 0, g0.center.z);
+      place.rotation.y = Math.atan2(g0.dirX, g0.dirZ);
+      this.group.add(place);
+    });
 
     // Rambid
     for (const rd of def.ramps) {

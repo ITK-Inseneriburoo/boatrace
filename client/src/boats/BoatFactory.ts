@@ -2,6 +2,14 @@ import * as THREE from "three";
 import type { VehicleId } from "@shared/types";
 import { VEHICLES } from "@shared/vehicles";
 import { makeHullGeometry, makeJetskiHullGeometry } from "./boatMeshes";
+import { fitToSize, loadModel, wrapRotated } from "../core/Assets";
+
+/** Kenney GLB vasted (jetid jäävad protseduuriliseks — pakis pole) */
+const VEHICLE_MODELS: Partial<Record<VehicleId, { file: string; rotY: number; draft: number }>> = {
+  kiirpaat: { file: "boat-speed-b", rotY: 0, draft: 0.22 },
+  kaater: { file: "boat-speed-c", rotY: 0, draft: 0.24 },
+  kalapaat: { file: "boat-fishing-small", rotY: 0, draft: 0.28 },
+};
 
 /** Kere põhivärvid sõidukite kaupa */
 const HULL_COLORS: Record<VehicleId, number> = {
@@ -125,5 +133,42 @@ export function buildBoatModel(id: VehicleId, accentColor: number): THREE.Group 
       o.castShadow = true;
     }
   });
+
+  // Progressiivne täiustus: kui GLB-mudel on olemas, asenda protseduuriline.
+  // Mängija värv jääb nähtavaks ahtrivimplina.
+  const cfg = VEHICLE_MODELS[id];
+  if (cfg) {
+    void loadModel(cfg.file).then((m) => {
+      if (!m) return;
+      const wrapped = wrapRotated(m, cfg.rotY);
+      fitToSize(wrapped, s.hullLength, "z");
+      wrapped.position.y -= cfg.draft;
+      group.clear();
+      group.add(wrapped);
+      group.add(buildPennant(accentColor, s.hullLength));
+    });
+  }
   return group;
+}
+
+/** Väike lehvik-vimpel ahtris — mängija värvi tuvastus GLB-paatidel */
+function buildPennant(color: number, hullLength: number): THREE.Group {
+  const g = new THREE.Group();
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 1.1, 6), darkMat);
+  mast.position.y = 0.9;
+  g.add(mast);
+  const flagShape = new THREE.Shape();
+  flagShape.moveTo(0, 0);
+  flagShape.lineTo(0.55, 0.14);
+  flagShape.lineTo(0, 0.28);
+  flagShape.closePath();
+  const flag = new THREE.Mesh(
+    new THREE.ShapeGeometry(flagShape),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.6, side: THREE.DoubleSide }),
+  );
+  flag.position.set(0, 1.16, 0);
+  flag.rotation.y = Math.PI / 2;
+  g.add(flag);
+  g.position.set(0, 0, -hullLength * 0.42);
+  return g;
 }

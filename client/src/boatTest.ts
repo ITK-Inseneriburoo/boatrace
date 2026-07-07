@@ -21,10 +21,21 @@ const grid = new THREE.GridHelper(40, 40, 0x666666, 0x556066);
 scene.add(grid);
 
 const colors = [0xe63946, 0xf4a261, 0x2a9d8f, 0x4895ef, 0x9b5de5];
+const models: THREE.Group[] = [];
 VEHICLE_IDS.forEach((id, i) => {
   const m = buildBoatModel(id, colors[i]);
   m.position.set((i - 2) * 4.5, 0.3, 0);
   scene.add(m);
+  models.push(m);
+});
+
+
+// Ramp orientatsiooni kontrolliks (eemal paatidest)
+import("./world/props/Ramp").then(({ buildRampMesh }) => {
+  const ramp = buildRampMesh({
+    x: 0, z: 9, dirX: 0, dirZ: 1, width: 7, length: 13, height: 2.2,
+  });
+  scene.add(ramp);
 });
 
 let angle = 0.5;
