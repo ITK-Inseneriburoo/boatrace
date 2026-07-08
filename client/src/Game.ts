@@ -20,7 +20,7 @@ import type { TrackId } from "@shared/types";
 import type { ErrorCode, RoomStateMsg } from "@shared/protocol";
 import { ScreenManager } from "./ui/ScreenManager";
 import { MainMenu, type GraphicsLevel, type MenuChoices } from "./ui/screens/MainMenu";
-import { ResultsScreen, type ResultRow } from "./ui/screens/Results";
+import { ResultsScreen, type ResultRow, type ResultsMeta } from "./ui/screens/Results";
 import { LobbyBrowser } from "./ui/screens/LobbyBrowser";
 import { RoomScreen } from "./ui/screens/RoomScreen";
 import { Hud } from "./ui/screens/Hud";
@@ -69,6 +69,7 @@ export class Game {
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
   private boostCooldown = new Map<number, number>();
+  private soloHadRecord = false;
 
   // --- Efektid ---
   private effects = new Effects();
@@ -158,6 +159,7 @@ export class Game {
     this.results.onRestart = () => {
       if (this.choices) this.startSolo(this.choices);
     };
+    this.results.onVariant = () => this.startSoloWeatherVariant();
     this.results.onMenu = () => {
       if (this.mode === "mp" && this.room) this.backToRoom();
       else this.toMenu();
@@ -258,6 +260,7 @@ export class Game {
     this.setTrack(c.track);
     this.applyWeather(WEATHERS[c.weather]);
     this.spawnOwnBoat(c.vehicle, c.color, 0);
+    this.soloHadRecord = false;
 
     // Kummituspaat: eelmine parim ring sõidab kaasa
     this.ghostBoat?.dispose();
@@ -276,7 +279,10 @@ export class Game {
     this.race.onLap = (_lap, ms) => {
       const previousBest = this.ghostBestMs;
       const record = this.ghostRecorder?.finishLap(ms) ?? false;
-      if (record) this.ghostBestMs = ms;
+      if (record) {
+        this.ghostBestMs = ms;
+        this.soloHadRecord = true;
+      }
       const delta =
         previousBest !== null && isFinite(previousBest) ? ` (${ms - previousBest <= 0 ? "−" : "+"}${(Math.abs(ms - previousBest) / 1000).toFixed(2)}s)` : "";
       this.hud.flashCenter(
@@ -601,6 +607,15 @@ export class Game {
     this.hud.hide();
     this.gateArrow.visible = false;
     this.stopRaceAudio();
+    const meta: ResultsMeta = {
+      trackName: this.track.def.nimi,
+      weatherName: this.weather.nimi,
+      vehicleName: VEHICLES[this.choices.vehicle].nimi,
+      laps: this.race.totalLaps,
+      bestLapMs: this.race.bestLap,
+      newRecord: this.soloHadRecord,
+      variantLabel: t("tulemused.jargmineIlm"),
+    };
     this.results.setResults(
       [
         {
@@ -612,8 +627,17 @@ export class Game {
         },
       ],
       this.race.lapTimes,
+      meta,
     );
     this.screens.show(this.results);
+  }
+
+  private startSoloWeatherVariant(): void {
+    if (!this.choices) return;
+    const allowed = this.track.def.allowedWeathers;
+    const i = allowed.indexOf(this.choices.weather);
+    const weather = allowed[(i + 1 + allowed.length) % allowed.length] ?? this.choices.weather;
+    this.startSolo({ ...this.choices, weather });
   }
 
   private respawn(): void {

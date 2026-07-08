@@ -334,3 +334,35 @@ table.results td {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 table.results tr.me td { color: var(--accent); font-weight: 700; }
+
+.result-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 620px;
+}
+.summary-card {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 12px 14px;
+}
+.summary-card.hot {
+  border-color: rgba(46, 196, 182, 0.65);
+  background: rgba(46, 196, 182, 0.14);
+}
+.summary-label {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.summary-value {
+  margin-top: 4px;
+  font-weight: 750;
+}
+
+@media (max-width: 720px) {
+  .result-summary { grid-template-columns: 1fr; }
+}
