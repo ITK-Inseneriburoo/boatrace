@@ -37,6 +37,16 @@ import { clamp } from "@shared/math";
 
 type GameState = "menu" | "lobby" | "room" | "countdown" | "racing" | "results";
 
+interface WaterShot {
+  ownerId: string;
+  x: number;
+  z: number;
+  dirX: number;
+  dirZ: number;
+  life: number;
+  mesh: THREE.Mesh;
+}
+
 /**
  * Mängu olekumasin.
  * Soolo: menu → countdown → racing → results.
@@ -69,6 +79,17 @@ export class Game {
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
   private boostCooldown = new Map<number, number>();
+  private shotReadyAt = 0;
+  private shots: WaterShot[] = [];
+  private shotGeo = new THREE.SphereGeometry(0.7, 12, 8);
+  private shotMat = new THREE.MeshStandardMaterial({
+    color: 0xb7f3ff,
+    emissive: 0x49d7ff,
+    emissiveIntensity: 0.9,
+    roughness: 0.2,
+    transparent: true,
+    opacity: 0.82,
+  });
   private soloHadRecord = false;
 
   // --- Efektid ---
@@ -302,6 +323,7 @@ export class Game {
     this.hud.show();
     this.gateArrow.visible = true;
     this.boostCooldown.clear();
+    this.clearShots();
     this.state = "countdown";
     this.countdownT = 3.999;
     this.lastCountShown = -1;
@@ -370,6 +392,7 @@ export class Game {
       const rb = this.remoteBoats.get(m.id);
       if (rb) rb.push(m.st, m);
     });
+    net.on("shot", (m) => this.spawnWaterShot(m.playerId, m.x, m.z, m.yaw));
     net.on("standings", (m) => (this.standings = m.order));
     net.on("lap", (m) => {
       if (m.playerId === net.playerId) {
@@ -395,6 +418,7 @@ export class Game {
       this.state = "results";
       this.hud.hide();
       this.gateArrow.visible = false;
+      this.clearShots();
       this.stopRaceAudio();
       this.screens.show(this.results);
     });
@@ -481,6 +505,7 @@ export class Game {
     this.standings = [];
     this.sendAccum = 0;
     this.boostCooldown.clear();
+    this.clearShots();
     this.lastCountShown = -1;
 
     this.screens.show(null);
@@ -497,6 +522,7 @@ export class Game {
     this.spectating = false;
     this.gateArrow.visible = false;
     this.clearRemoteBoats();
+    this.clearShots();
     this.stopRaceAudio();
     if (this.room) this.roomScreen.setRoom(this.room);
     this.screens.show(this.roomScreen);
@@ -579,6 +605,7 @@ export class Game {
       this.spectating = false;
       this.gateArrow.visible = false;
       this.clearRemoteBoats();
+      this.clearShots();
       this.stopRaceAudio();
       this.state = "lobby";
       this.screens.show(this.lobbyScreen);
@@ -595,6 +622,7 @@ export class Game {
     this.spectating = false;
     this.gateArrow.visible = false;
     this.clearRemoteBoats();
+    this.clearShots();
     this.stopRaceAudio();
     this.ghostBoat?.dispose();
     this.ghostBoat = null;
@@ -608,6 +636,7 @@ export class Game {
     this.state = "results";
     this.hud.hide();
     this.gateArrow.visible = false;
+    this.clearShots();
     this.stopRaceAudio();
     const meta: ResultsMeta = {
       trackName: this.track.def.nimi,
@@ -707,6 +736,7 @@ export class Game {
 
     if (this.state === "racing" && this.boat && this.race) {
       if (this.input.respawnPressed && !this.paused) this.respawn();
+      if (this.input.actionPressed && !this.paused) this.fireWaterShot();
       // Hoovus (jõekanjon)
       const cur = this.track.def.current ?? 0;
       if (cur > 0) {
@@ -785,6 +815,7 @@ export class Game {
         if (this.finishTimer <= 0) this.showSoloResults();
       }
     }
+    if (this.state === "racing") this.updateWaterShots(dt);
   }
 
   private render(alpha: number, frameDt: number): void {
@@ -948,6 +979,86 @@ export class Game {
       this.effects.burst(p.pos.x, p.pos.z, 0.45, this.weather.waves, now);
       break;
     }
+  }
+
+  private fireWaterShot(): void {
+    if (!this.boat) return;
+    const now = this.engine.simTime;
+    if (now < this.shotReadyAt) return;
+    const p = this.boat.physics;
+    const x = p.pos.x + p.forwardX * 4.2;
+    const z = p.pos.z + p.forwardZ * 4.2;
+    const ownerId = this.net?.playerId ?? "solo";
+    this.spawnWaterShot(ownerId, x, z, p.yaw);
+    this.shotReadyAt = now + 0.72;
+    this.sfx.splash(0.28);
+    if (this.mode === "mp") {
+      this.net?.send({
+        type: "shot",
+        x: Math.round(x * 100) / 100,
+        z: Math.round(z * 100) / 100,
+        yaw: Math.round(p.yaw * 1000) / 1000,
+      });
+    }
+  }
+
+  private spawnWaterShot(ownerId: string, x: number, z: number, yaw: number): void {
+    const mesh = new THREE.Mesh(this.shotGeo, this.shotMat);
+    mesh.castShadow = false;
+    mesh.scale.set(1, 0.72, 1.25);
+    this.engine.scene.add(mesh);
+    this.shots.push({
+      ownerId,
+      x,
+      z,
+      dirX: Math.sin(yaw),
+      dirZ: Math.cos(yaw),
+      life: 1.25,
+      mesh,
+    });
+  }
+
+  private updateWaterShots(dt: number): void {
+    if (!this.shots.length) return;
+    const myId = this.net?.playerId ?? "solo";
+    const speed = 54;
+    for (let i = this.shots.length - 1; i >= 0; i--) {
+      const shot = this.shots[i];
+      shot.life -= dt;
+      shot.x += shot.dirX * speed * dt;
+      shot.z += shot.dirZ * speed * dt;
+      const y = getWaveHeight(this.weather.waves, shot.x, shot.z, this.engine.simTime) + 0.6;
+      shot.mesh.position.set(shot.x, y, shot.z);
+      shot.mesh.rotation.y = Math.atan2(shot.dirX, shot.dirZ);
+      const pulse = 0.85 + Math.sin(this.engine.simTime * 22) * 0.12;
+      shot.mesh.scale.setScalar(pulse);
+
+      let remove = shot.life <= 0;
+      if (!remove && this.boat && shot.ownerId !== myId && !this.spectating) {
+        const p = this.boat.physics;
+        const d = Math.hypot(p.pos.x - shot.x, p.pos.z - shot.z);
+        if (d < p.stats.hullRadius + 1.25) {
+          p.vel.x += shot.dirX * 6.5;
+          p.vel.z += shot.dirZ * 6.5;
+          p.speed = Math.hypot(p.vel.x, p.vel.z);
+          this.chaseCam.addTrauma(0.28);
+          this.sfx.splash(0.55);
+          this.effects.burst(p.pos.x, p.pos.z, 0.55, this.weather.waves, this.engine.simTime);
+          this.hud.flashCenter(t("hud.tabamus"), 0.75);
+          remove = true;
+        }
+      }
+      if (remove) {
+        shot.mesh.removeFromParent();
+        this.shots.splice(i, 1);
+      }
+    }
+  }
+
+  private clearShots(): void {
+    for (const shot of this.shots) shot.mesh.removeFromParent();
+    this.shots = [];
+    this.shotReadyAt = 0;
   }
 
   private updateHud(frameDt: number): void {

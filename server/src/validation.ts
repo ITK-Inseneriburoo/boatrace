@@ -103,6 +103,10 @@ export function validateC2S(raw: unknown): C2S | null {
         v: m.v as [number, number],
         s: m.s as number,
       };
+    case "shot":
+      return Number.isFinite(m.x) && Number.isFinite(m.z) && Number.isFinite(m.yaw)
+        ? { type: "shot", x: m.x as number, z: m.z as number, yaw: m.yaw as number }
+        : null;
     case "gate":
       return Number.isInteger(m.gate) && (m.gate as number) >= 0 && (m.gate as number) < 200
         ? { type: "gate", gate: m.gate as number }

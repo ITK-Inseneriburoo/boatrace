@@ -27,8 +27,56 @@ export interface CollisionEvent {
   soft: boolean;
 }
 
+interface Capsule {
+  ax: number;
+  az: number;
+  bx: number;
+  bz: number;
+  r: number;
+}
+
+function boatCapsule(boat: BoatPhysics): Capsule {
+  const r = Math.max(boat.stats.hullWidth * 0.48, 0.55);
+  const half = Math.max(boat.stats.hullLength / 2 - r, 0);
+  return {
+    ax: boat.pos.x - boat.forwardX * half,
+    az: boat.pos.z - boat.forwardZ * half,
+    bx: boat.pos.x + boat.forwardX * half,
+    bz: boat.pos.z + boat.forwardZ * half,
+    r,
+  };
+}
+
+function closestOnSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): [number, number] {
+  const abx = bx - ax, abz = bz - az;
+  const len2 = abx * abx + abz * abz;
+  const t = len2 > 0
+    ? Math.max(0, Math.min(1, ((px - ax) * abx + (pz - az) * abz) / len2))
+    : 0;
+  return [ax + abx * t, az + abz * t];
+}
+
+function closestSegmentPoints(a: Capsule, s: SegmentCollider): [number, number, number, number] {
+  // XZ 2D segment distance. Check endpoints both ways; good enough for short
+  // static colliders and avoids solving the full degenerate segment system.
+  const candidates: [number, number, number, number, number][] = [];
+  for (const [px, pz] of [[a.ax, a.az], [a.bx, a.bz]] as [number, number][]) {
+    const [cx, cz] = closestOnSegment(px, pz, s.ax, s.az, s.bx, s.bz);
+    const d2 = (px - cx) * (px - cx) + (pz - cz) * (pz - cz);
+    candidates.push([d2, px, pz, cx, cz]);
+  }
+  for (const [px, pz] of [[s.ax, s.az], [s.bx, s.bz]] as [number, number][]) {
+    const [cx, cz] = closestOnSegment(px, pz, a.ax, a.az, a.bx, a.bz);
+    const d2 = (cx - px) * (cx - px) + (cz - pz) * (cz - pz);
+    candidates.push([d2, cx, cz, px, pz]);
+  }
+  candidates.sort((x, y) => x[0] - y[0]);
+  const best = candidates[0];
+  return [best[1], best[2], best[3], best[4]];
+}
+
 /**
- * Paat = ring XZ-tasandil. Lahendab ringid, lõigud ja maastikuseina.
+ * Paat = orienteeritud kapsel XZ-tasandil. Lahendab ringid, lõigud ja maastikuseina.
  * Tagastab tugevaima löögi (heli/kaamera jaoks).
  */
 export function resolveCollisions(
@@ -36,19 +84,24 @@ export function resolveCollisions(
   colliders: ColliderSet,
   terrain: Terrain | null,
 ): CollisionEvent | null {
-  const br = boat.stats.hullRadius;
+  const hull = boatCapsule(boat);
   let worst: CollisionEvent | null = null;
   const note = (impact: number, soft: boolean): void => {
     if (impact > 0.5 && (!worst || impact > worst.impact)) worst = { impact, soft };
   };
 
   for (const c of colliders.circles) {
-    const dx = boat.pos.x - c.x;
-    const dz = boat.pos.z - c.z;
+    const [hx, hz] = closestOnSegment(c.x, c.z, hull.ax, hull.az, hull.bx, hull.bz);
+    const dx = hx - c.x;
+    const dz = hz - c.z;
     const d = Math.hypot(dx, dz);
-    const minD = br + c.r;
-    if (d < minD && d > 1e-4) {
-      const nx = dx / d, nz = dz / d;
+    const minD = hull.r + c.r;
+    if (d < minD) {
+      const fallbackX = boat.pos.x - c.x;
+      const fallbackZ = boat.pos.z - c.z;
+      const fallbackD = Math.hypot(fallbackX, fallbackZ);
+      const nx = d > 1e-4 ? dx / d : fallbackD > 1e-4 ? fallbackX / fallbackD : boat.forwardX;
+      const nz = d > 1e-4 ? dz / d : fallbackD > 1e-4 ? fallbackZ / fallbackD : boat.forwardZ;
       const push = minD - d;
       if (c.soft) {
         // Poi: nõks, mitte sein
@@ -62,17 +115,21 @@ export function resolveCollisions(
   }
 
   for (const s of colliders.segments) {
-    const abx = s.bx - s.ax, abz = s.bz - s.az;
-    const len2 = abx * abx + abz * abz;
-    const t = len2 > 0
-      ? Math.max(0, Math.min(1, ((boat.pos.x - s.ax) * abx + (boat.pos.z - s.az) * abz) / len2))
-      : 0;
-    const cx = s.ax + abx * t, cz = s.az + abz * t;
-    const dx = boat.pos.x - cx, dz = boat.pos.z - cz;
+    const [hx, hz, sx, sz] = closestSegmentPoints(hull, s);
+    const dx = hx - sx, dz = hz - sz;
     const d = Math.hypot(dx, dz);
-    const minD = br + s.r;
-    if (d < minD && d > 1e-4) {
-      note(boat.applyImpulse(dx / d, dz / d, minD - d), false);
+    const minD = hull.r + s.r;
+    if (d < minD) {
+      const [cx, cz] = closestOnSegment(boat.pos.x, boat.pos.z, s.ax, s.az, s.bx, s.bz);
+      const fallbackX = boat.pos.x - cx;
+      const fallbackZ = boat.pos.z - cz;
+      const fallbackD = Math.hypot(fallbackX, fallbackZ);
+      const sxn = s.bx - s.ax;
+      const szn = s.bz - s.az;
+      const sl = Math.hypot(sxn, szn) || 1;
+      const nx = d > 1e-4 ? dx / d : fallbackD > 1e-4 ? fallbackX / fallbackD : -szn / sl;
+      const nz = d > 1e-4 ? dz / d : fallbackD > 1e-4 ? fallbackZ / fallbackD : sxn / sl;
+      note(boat.applyImpulse(nx, nz, minD - d), false);
     }
   }
 
@@ -80,15 +137,19 @@ export function resolveCollisions(
   if (terrain) {
     const h = terrain.getHeight(boat.pos.x, boat.pos.z);
     const ahead = terrain.getHeight(
-      boat.pos.x + boat.forwardX * br,
-      boat.pos.z + boat.forwardZ * br,
+      hull.bx + boat.forwardX * hull.r,
+      hull.bz + boat.forwardZ * hull.r,
     );
-    if (h > 0.35 || ahead > 0.35) {
+    const stern = terrain.getHeight(
+      hull.ax - boat.forwardX * hull.r,
+      hull.az - boat.forwardZ * hull.r,
+    );
+    if (h > 0.35 || ahead > 0.35 || stern > 0.35) {
       const [gx, gz] = terrain.getGradient(boat.pos.x, boat.pos.z);
       const g = Math.hypot(gx, gz);
       if (g > 1e-4) {
         const nx = -gx / g, nz = -gz / g; // allamäge = vee poole
-        note(boat.applyImpulse(nx, nz, Math.min(Math.max(h, ahead), 1.2) + 0.15, 0.1), false);
+        note(boat.applyImpulse(nx, nz, Math.min(Math.max(h, ahead, stern), 1.2) + 0.15, 0.1), false);
       }
     }
   }

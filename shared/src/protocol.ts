@@ -70,6 +70,7 @@ export type C2S =
   | { type: "configureRace"; config: RoomConfig }
   | { type: "startRace" }
   | ({ type: "state" } & StatePayload)
+  | { type: "shot"; x: number; z: number; yaw: number }
   | { type: "gate"; gate: number }
   | { type: "respawn" }
   | { type: "ping"; t: number };
@@ -90,6 +91,7 @@ export type S2C =
     }
   | { type: "raceStarted"; startTime: number }
   | ({ type: "peer"; id: string; st: number } & StatePayload)
+  | { type: "shot"; playerId: string; x: number; z: number; yaw: number; st: number }
   | { type: "gateOk"; playerId: string; gate: number; lap: number }
   | { type: "lap"; playerId: string; lap: number; lapMs: number }
   | { type: "finished"; playerId: string; position: number; totalMs: number }

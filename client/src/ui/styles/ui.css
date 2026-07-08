@@ -172,6 +172,12 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
   background: rgba(46, 196, 182, 0.12);
 }
 .vehicle-card .vname { font-weight: 700; }
+.vehicle-card .vability {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-top: 3px;
+}
 .vehicle-card .vdesc {
   font-size: 0.72rem;
   color: var(--text-dim);

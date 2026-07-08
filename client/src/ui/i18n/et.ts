@@ -34,6 +34,8 @@ const et = {
   "hud.boost": "HOOG!",
   "hud.varavMoodas": "VÄRAVAST MÖÖDA",
   "hud.puhasRingRikutud": "PUHAS RING RIKUTUD",
+  "hud.tabamus": "TABAMUS!",
+  "hud.veekahur": "VEEKAHUR",
   "hud.respawn": "Ctrl — boost · R — tagasi rajale · H — juhtimine · Esc — paus",
   "hud.vaatleja": "Vaatleja",
   "hud.ootabPaate": "Ootab paate…",

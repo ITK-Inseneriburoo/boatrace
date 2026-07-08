@@ -42,7 +42,10 @@ export class BoatPhysics {
   boostEnergy = 1;
   /** kas boost on hetkel aktiivne (HUD/heli/fx jaoks) */
   boosting = false;
+  /** Shift-võime aktiivsus (sõidukispetsiifiline) */
+  abilityActive = false;
   private boostRefillDelay = 0;
+  private braceActive = false;
   /** hoovus (m/s²) — jõekanjon lükkab piki rada */
   currentX = 0;
   currentZ = 0;
@@ -75,6 +78,8 @@ export class BoatPhysics {
     this.lastSurfY = null;
     this.boostEnergy = 1;
     this.boosting = false;
+    this.abilityActive = false;
+    this.braceActive = false;
     this.boostRefillDelay = 0;
   }
 
@@ -120,6 +125,9 @@ export class BoatPhysics {
     this.lastSurfY = waterY;
 
     const speedRatio = clamp(this.speed / s.topSpeed, 0, 1);
+    const ability = !!input.slide && !this.airborne;
+    this.abilityActive = ability;
+    this.braceActive = ability && s.id === "kalapaat";
 
     if (!this.airborne) {
       // --- Vees: vedru-sumbuvusega heave + pitch/roll sihtide poole ---
@@ -134,8 +142,9 @@ export class BoatPhysics {
       const planingPitch = speedRatio * 0.06 * (input.throttle > 0 ? 1 : 0.3);
       const targetPitch = Math.atan2(hBow - hStern, s.hullLength) + planingPitch;
       // Lained + kurvi sissepoole kaldumine (yawRate+ = vasakpööre → vasak külg alla)
+      const rollMul = ability && s.id === "sportjett" ? 0.78 : 0.55;
       const targetRoll =
-        Math.atan2(hLeft - hRight, s.hullWidth) - this.yawRate * speedRatio * 0.55;
+        Math.atan2(hLeft - hRight, s.hullWidth) - this.yawRate * speedRatio * rollMul;
       this.pitch = damp(this.pitch, targetPitch, 6, dt);
       this.roll = damp(this.roll, clamp(targetRoll, -0.5, 0.5), 5, dt);
 
@@ -202,11 +211,19 @@ export class BoatPhysics {
     const latSpeed = vx * rx + vz * rz;
 
     // Ruutkiirustakistus: terminal ≈ topSpeed
-    const dragK = s.accel / (s.topSpeed * s.topSpeed);
+    let dragK = s.accel / (s.topSpeed * s.topSpeed);
+    if (ability && s.id === "kaater" && input.throttle > 0) dragK *= 0.68;
     const newFwd = fwdSpeed - Math.sign(fwdSpeed) * dragK * fwdSpeed * fwdSpeed * dt
       - Math.sign(fwdSpeed) * 0.35 * dt; // lineaarne lisahõõre madalatel kiirustel
     // Külgtakistus = grip (slide lõikab gripi triivimiseks)
-    const gripNow = input.slide && s.slideBoost ? s.grip * 0.25 : this.airborne ? s.grip * 0.1 : s.grip;
+    let gripNow = this.airborne ? s.grip * 0.1 : s.grip;
+    if (ability) {
+      if (s.id === "sportjett") gripNow = s.grip * 0.11;
+      else if (s.id === "jett") gripNow = s.grip * 1.45;
+      else if (s.id === "kiirpaat") gripNow = s.grip * 1.25;
+      else if (s.id === "kaater") gripNow = s.grip * 0.72;
+      else if (s.id === "kalapaat") gripNow = s.grip * 1.15;
+    }
     const newLat = latSpeed * Math.exp(-gripNow * 8 * dt);
 
     this.vel.x = fx * newFwd + rx * newLat;
@@ -215,7 +232,13 @@ export class BoatPhysics {
     // --- Rool ---
     // NB: yaw+ pöörab forward-vektori +X poole, mis on tagantvaates VASAKULE,
     // seega parem (steer +1) = negatiivne yawRate.
-    const steerAuthority = Math.sqrt(Math.max(speedRatio, 0.04)) * (this.airborne ? 0.15 : 1);
+    let steerAuthority = Math.sqrt(Math.max(speedRatio, 0.04)) * (this.airborne ? 0.15 : 1);
+    if (ability) {
+      if (s.id === "sportjett") steerAuthority *= 1.22;
+      else if (s.id === "jett") steerAuthority *= 1.38;
+      else if (s.id === "kiirpaat") steerAuthority *= 1.18;
+      else if (s.id === "kaater") steerAuthority *= 0.72;
+    }
     // Tagurdades peegeldub roolitunnetus nagu autol (ahter läheb klahvi suunas)
     const reversing = fwdSpeed < -0.5 ? -1 : 1;
     const targetYawRate = -input.steer * s.rudder * 1.15 * steerAuthority * reversing;
@@ -242,11 +265,11 @@ export class BoatPhysics {
     let impact = 0;
     if (vn < 0) {
       impact = -vn;
-      const massSoften = 1 / this.stats.mass;
+      const massSoften = (this.braceActive ? 0.45 : 1) / this.stats.mass;
       this.vel.x -= nx * vn * (1 + restitution);
       this.vel.z -= nz * vn * (1 + restitution);
       // Löök võtab hoogu maha (raske kere kaotab vähem)
-      const slow = clamp(1 - impact * 0.03 * massSoften, 0.5, 1);
+      const slow = clamp(1 - impact * 0.03 * massSoften, this.braceActive ? 0.72 : 0.5, 1);
       this.vel.x *= slow;
       this.vel.z *= slow;
     }

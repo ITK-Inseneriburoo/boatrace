@@ -34,6 +34,7 @@ export class Player {
   stateWindow = { start: 0, count: 0 };
   msgWindow = { start: 0, count: 0 };
   chatTimes: number[] = [];
+  lastShotAt = 0;
   /** stardikoha positsioon (stardieelse liikumise tõkkeks) */
   spawnSlot = 0;
 
@@ -63,6 +64,7 @@ export class Player {
     this.totalMs = null;
     this.dnf = false;
     this.lastStatePos = null;
+    this.lastShotAt = 0;
   }
 
   /** Väravaid läbitud kokku (edetabeli järjestuseks) */

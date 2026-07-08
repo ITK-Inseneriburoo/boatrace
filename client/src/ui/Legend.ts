@@ -5,7 +5,8 @@ const RIDA: [string, string][] = [
   ["S / ↓", "Pidur / tagurdamine"],
   ["A · D / ← · →", "Rool"],
   ["Ctrl", "Boost (kiiruslisa, taastuv)"],
-  ["Shift / Tühik", "Triiv — ainult Sportjett"],
+  ["Shift", "Sõidukivõime"],
+  ["Tühik", "Veekahur"],
   ["R", "Tagasi rajale"],
   ["H", "Juhtimise legend"],
   ["1 · 2 · 3", "—"],
@@ -39,7 +40,7 @@ export function buildLegend(includeSpectator = true): HTMLElement {
     wrap.appendChild(row(k, v));
   }
   wrap.appendChild(
-    h("div", { style: "color:var(--text-dim);font-size:.78rem;margin-top:4px" }, "Gamepad: RT gaas · LT pidur · vasak kepp rool · B/RB boost · A triiv"),
+    h("div", { style: "color:var(--text-dim);font-size:.78rem;margin-top:4px" }, "Gamepad: RT gaas · LT pidur · vasak kepp rool · B/RB boost · A võime · X veekahur"),
   );
   if (includeSpectator) {
     wrap.appendChild(

@@ -270,6 +270,31 @@ export class ConnectionHandler {
         break;
       }
 
+      case "shot": {
+        const room = p.room;
+        if (!room || room.phase !== "racing" || p.dnf || p.spectator) break;
+        const now = Date.now();
+        if (now - p.lastShotAt < 700) break;
+        if (p.lastStatePos) {
+          const dx = msg.x - p.lastStatePos[0];
+          const dz = msg.z - p.lastStatePos[2];
+          if (Math.hypot(dx, dz) > 18) break;
+        }
+        p.lastShotAt = now;
+        room.broadcast(
+          {
+            type: "shot",
+            playerId: p.id,
+            x: Math.round(msg.x * 100) / 100,
+            z: Math.round(msg.z * 100) / 100,
+            yaw: Math.round(msg.yaw * 1000) / 1000,
+            st: now,
+          },
+          p,
+        );
+        break;
+      }
+
       case "respawn":
         // Respawn nullib teleportide kontrolli referentsi
         p.lastStatePos = null;

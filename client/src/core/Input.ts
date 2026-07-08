@@ -1,6 +1,6 @@
 /**
  * Klaviatuur (WASD + nooled) ja gamepad.
- * throttle ∈ [-1,1], steer ∈ [-1,1] (-1 = vasakule), slide = triivinupp.
+ * throttle ∈ [-1,1], steer ∈ [-1,1] (-1 = vasakule), ability = sõidukivõime.
  */
 export class Input {
   private keys = new Set<string>();
@@ -65,7 +65,7 @@ export class Input {
 
   get slide(): boolean {
     const gp = this.gamepad();
-    return this.keys.has("ShiftLeft") || this.keys.has("Space") || !!gp?.buttons[0]?.pressed;
+    return this.keys.has("ShiftLeft") || this.keys.has("ShiftRight") || !!gp?.buttons[0]?.pressed;
   }
 
   /** Boost — hoia all lühiajaliseks kiiruslisaks (Ctrl või gamepadi B/RB) */
@@ -81,5 +81,10 @@ export class Input {
 
   get respawnPressed(): boolean {
     return this.justPressed.has("KeyR");
+  }
+
+  get actionPressed(): boolean {
+    const gp = this.gamepad();
+    return this.justPressed.has("Space") || !!gp?.buttons[2]?.pressed;
   }
 }

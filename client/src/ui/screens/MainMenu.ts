@@ -92,6 +92,7 @@ export class MainMenu implements Screen {
         "div",
         { class: "vehicle-card" },
         h("div", { class: "vname" }, v.nimi),
+        h("div", { class: "vability" }, `Shift: ${v.abilityName}`),
         h("div", { class: "vdesc" }, v.kirjeldus),
         h("div", { class: "vstats" }, bar(v.topSpeed / 35), bar(v.accel / 11), bar(v.grip)),
       );
