@@ -126,7 +126,7 @@ export class Game {
     this.gateArrow.visible = false;
     this.engine.scene.add(this.gateArrow);
 
-    this.applyWeather(WEATHERS.paike);
+    this.applyWeather(WEATHERS[this.menu.currentWeather()] ?? WEATHERS.paike);
 
     // AudioContext vajab kasutaja žesti
     window.addEventListener("pointerdown", () => this.audio.ensure());
@@ -146,6 +146,9 @@ export class Game {
     this.menu.onGraphics = (level) => this.applyGraphics(level);
     this.menu.onTrack = (id) => {
       if (this.state === "menu") this.setTrack(id);
+    };
+    this.menu.onWeather = (id) => {
+      if (this.state === "menu") this.applyWeather(WEATHERS[id]);
     };
     this.menu.enableMultiplayer();
     this.applyGraphics(this.menu.currentGraphics());
@@ -317,8 +320,12 @@ export class Game {
         this.state = "room";
         this.screens.show(this.roomScreen);
       }
-      // Toas näidatakse taustal valitud rada
-      if (this.state === "room") this.setTrack(m.room.config.trackId);
+      // Toas näidatakse taustal valitud rada ja ilma
+      if (this.state === "room") {
+        this.setTrack(m.room.config.trackId);
+        const w = WEATHERS[m.room.config.weatherId];
+        if (w && w !== this.weather) this.applyWeather(w);
+      }
       this.syncRemoteBoatRoster();
     });
     net.on("leftRoom", () => {

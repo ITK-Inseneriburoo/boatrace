@@ -29,6 +29,8 @@ export class MainMenu implements Screen {
   onGraphics: (level: GraphicsLevel) => void = () => {};
   /** Rajavalik muutus — taustamaailm saab kohe kaasa vahetuda */
   onTrack: (id: TrackId) => void = () => {};
+  /** Ilmavalik muutus — taust vahetab ilma kohe */
+  onWeather: (id: WeatherId) => void = () => {};
   multiplayerEnabled = false;
 
   private choices: MenuChoices = {
@@ -127,6 +129,7 @@ export class MainMenu implements Screen {
         chip.classList.add("selected");
         this.choices.weather = w.id;
         this.persist();
+        this.onWeather(w.id);
       };
       wEls.push(chip);
       weathers.appendChild(chip);
@@ -211,6 +214,10 @@ export class MainMenu implements Screen {
 
   currentTrack(): TrackId {
     return this.choices.track;
+  }
+
+  currentWeather(): WeatherId {
+    return this.choices.weather;
   }
 
   enableMultiplayer(): void {
