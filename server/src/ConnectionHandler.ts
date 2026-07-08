@@ -55,7 +55,10 @@ export class ConnectionHandler {
     });
 
     socket.on("close", () => {
-      if (player) this.handleDisconnect(player);
+      // Ignoreeri vana socketi close'i, kui mängija on vahepeal juba uue
+      // socketiga reconnectinud (tryReconnect termineerib vana socketi — see
+      // close ei tohi värsket ühendust maha võtta).
+      if (player && player.socket === socket) this.handleDisconnect(player);
     });
     socket.on("error", () => socket.terminate());
   }
