@@ -8,9 +8,17 @@ export interface BoatInput {
   throttle: number; // [-1,1]
   steer: number; // [-1,1]
   slide: boolean;
+  boost?: boolean;
 }
 
 export const GRAVITY = 13; // arkaadne gravitatsioon — piisavalt õhku hüpeteks
+
+// Boost (Ctrl): tõukejõu kordaja piiratud energiaga. Kuna takistus jääb samaks,
+// tõuseb ka tippkiirus ≈ topSpeed·√MUL (1.9 → ~+38%).
+const BOOST_ACCEL_MUL = 1.9;
+const BOOST_DRAIN = 0.4; // energiat/s (~2.5 s täisboosti täisakust)
+const BOOST_REFILL = 1 / 6; // taastub ~6 s tühjast täis
+const BOOST_REFILL_DELAY = 1; // s peale lahtilaskmist enne taastumist
 
 /**
  * Pinnakõrguse lisafunktsioon (rambid faasis 4):
@@ -30,6 +38,11 @@ export class BoatPhysics {
   speed = 0;
   /** gaasi hetkeväärtus heli jaoks */
   throttle = 0;
+  /** boosti energia 0..1 */
+  boostEnergy = 1;
+  /** kas boost on hetkel aktiivne (HUD/heli/fx jaoks) */
+  boosting = false;
+  private boostRefillDelay = 0;
   /** hoovus (m/s²) — jõekanjon lükkab piki rada */
   currentX = 0;
   currentZ = 0;
@@ -60,6 +73,9 @@ export class BoatPhysics {
     this.heaveVel = 0;
     this.climbRate = 0;
     this.lastSurfY = null;
+    this.boostEnergy = 1;
+    this.boosting = false;
+    this.boostRefillDelay = 0;
   }
 
   get forwardX(): number {
@@ -153,13 +169,29 @@ export class BoatPhysics {
       }
     }
 
+    // --- Boost (Ctrl) ---
+    // Aktiivne ainult vees, edasigaasiga ja kui energiat jagub. Kulutab energiat;
+    // taastub viivitusega peale lahtilaskmist.
+    const wantsBoost = !!input.boost && !this.airborne && input.throttle > 0;
+    const boostActive = wantsBoost && this.boostEnergy > 0;
+    this.boosting = boostActive;
+    if (boostActive) {
+      this.boostEnergy = Math.max(0, this.boostEnergy - BOOST_DRAIN * dt);
+      this.boostRefillDelay = BOOST_REFILL_DELAY;
+    } else if (this.boostRefillDelay > 0) {
+      this.boostRefillDelay -= dt;
+    } else {
+      this.boostEnergy = Math.min(1, this.boostEnergy + BOOST_REFILL * dt);
+    }
+    const boostMul = boostActive ? BOOST_ACCEL_MUL : 1;
+
     // --- Tõukejõud (õhus propeller ei tööta) ---
     const thrustScale = this.airborne ? 0 : 1;
     // Vöör laine sees → tõuge kärbub (tormis tuntav)
     const buried = clamp(1 + this.pitch * 2.2, 0.35, 1);
     const fwdAccel =
       input.throttle >= 0
-        ? input.throttle * s.accel * buried
+        ? input.throttle * s.accel * buried * boostMul
         : input.throttle * s.accel * 0.45;
     this.vel.x += fx * fwdAccel * thrustScale * dt;
     this.vel.z += fz * fwdAccel * thrustScale * dt;

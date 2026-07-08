@@ -68,6 +68,17 @@ export class Input {
     return this.keys.has("ShiftLeft") || this.keys.has("Space") || !!gp?.buttons[0]?.pressed;
   }
 
+  /** Boost — hoia all lühiajaliseks kiiruslisaks (Ctrl või gamepadi B/RB) */
+  get boost(): boolean {
+    const gp = this.gamepad();
+    return (
+      this.keys.has("ControlLeft") ||
+      this.keys.has("ControlRight") ||
+      !!gp?.buttons[1]?.pressed || // B / ○
+      !!gp?.buttons[5]?.pressed // RB
+    );
+  }
+
   get respawnPressed(): boolean {
     return this.justPressed.has("KeyR");
   }

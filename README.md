@@ -36,10 +36,11 @@ faili — ka helid on sünteesitud).
 | W / ↑ | gaas |
 | S / ↓ | tagasikäik/pidur |
 | A / D või ← / → | rool |
-| Shift / tühik | triiv (Sportjett) |
+| Ctrl | boost — lühiajaline kiiruslisa (taastuv energia) |
+| Shift / tühik | triiv (ainult Sportjett) |
 | R | tagasi rajale (viimase värava juurde) |
 
-Toetatud on ka gamepad (RT gaas, vasak kepp rool).
+Toetatud on ka gamepad (RT gaas, vasak kepp rool, B/RB boost, A triiv).
 
 ## Arendus
 

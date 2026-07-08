@@ -197,6 +197,44 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
 }
 #hud-speed .unit { color: var(--text-dim); font-size: 0.9rem; }
 
+#hud-boost {
+  right: 28px;
+  bottom: 118px;
+  width: 168px;
+  text-align: right;
+}
+#hud-boost-track {
+  height: 9px;
+  border-radius: 5px;
+  background: rgba(8, 14, 20, 0.6);
+  border: 1px solid var(--panel-border);
+  overflow: hidden;
+}
+#hud-boost-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 5px 0 0 5px;
+  background: linear-gradient(90deg, #35c0ff, #7ee0ff);
+  transition: width 0.08s linear;
+}
+#hud-boost-label {
+  margin-top: 3px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+}
+#hud-boost.boosting #hud-boost-fill {
+  background: linear-gradient(90deg, #ffd23f, #ff7b3f);
+  box-shadow: 0 0 12px rgba(255, 150, 60, 0.8);
+}
+#hud-boost.boosting #hud-boost-label {
+  color: #ffb23f;
+}
+#hud-boost.empty #hud-boost-fill {
+  background: #5a6570;
+}
+
 #hud-lap {
   left: 24px;
   top: 20px;

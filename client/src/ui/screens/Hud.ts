@@ -17,6 +17,8 @@ export function formatMs(ms: number): string {
 export class Hud {
   readonly el: HTMLElement;
   private speedNum: HTMLElement;
+  private boostEl: HTMLElement;
+  private boostFill: HTMLElement;
   private lapEl: HTMLElement;
   private timesEl: HTMLElement;
   private posEl: HTMLElement;
@@ -34,6 +36,13 @@ export class Hud {
 
   constructor() {
     this.speedNum = h("div", { class: "num" }, "0");
+    this.boostFill = h("div", { id: "hud-boost-fill" });
+    this.boostEl = h(
+      "div",
+      { class: "hud-item", id: "hud-boost" },
+      h("div", { id: "hud-boost-track" }, this.boostFill),
+      h("div", { id: "hud-boost-label" }, t("hud.boost")),
+    );
     this.lapEl = h("div", { class: "hud-item", id: "hud-lap" });
     this.timesEl = h("div", { class: "hud-item", id: "hud-times" });
     this.posEl = h("div", { class: "hud-item", id: "hud-pos" });
@@ -81,6 +90,7 @@ export class Hud {
         this.speedNum,
         h("div", { class: "unit" }, t("hud.kmh")),
       ),
+      this.boostEl,
       this.lapEl,
       this.timesEl,
       this.posEl,
@@ -119,6 +129,7 @@ export class Hud {
   setSpectator(on: boolean, legend?: string): void {
     const d = on ? "none" : "";
     this.speedNum.parentElement!.style.display = d;
+    this.boostEl.style.display = d;
     this.lapEl.style.display = d;
     this.timesEl.style.display = d;
     this.posEl.style.display = d;
@@ -127,6 +138,14 @@ export class Hud {
 
   setSpeed(kmh: number): void {
     this.speedNum.textContent = String(Math.max(0, Math.round(kmh)));
+  }
+
+  /** Boostiriba: energy 0..1, active = kas hetkel boostitakse */
+  setBoost(energy: number, active: boolean): void {
+    const e = Math.max(0, Math.min(1, energy));
+    this.boostFill.style.width = `${Math.round(e * 100)}%`;
+    this.boostEl.classList.toggle("boosting", active);
+    this.boostEl.classList.toggle("empty", e < 0.02);
   }
 
   setLap(lap: number, total: number, gate: number, gates: number): void {

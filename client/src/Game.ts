@@ -657,7 +657,12 @@ export class Game {
       // Pausi ajal (võrgus) gaas maha — paat jääb triivima, sõit jätkub teistel
       const inp = this.paused
         ? { throttle: 0, steer: 0, slide: false }
-        : { throttle: this.input.throttle, steer: this.input.steer, slide: this.input.slide };
+        : {
+            throttle: this.input.throttle,
+            steer: this.input.steer,
+            slide: this.input.slide,
+            boost: this.input.boost,
+          };
       this.boat.update(inp, this.weather.waves, this.engine.simTime, dt);
       const hit = resolveCollisions(this.boat.physics, this.track.colliders, this.track.terrain);
       if (hit && !hit.soft) {
@@ -867,6 +872,7 @@ export class Game {
     const b = this.boat!;
     const r = this.race!;
     this.hud.setSpeed(b.physics.speed * 3.6);
+    this.hud.setBoost(b.physics.boostEnergy, b.physics.boosting);
     this.hud.setLap(
       Math.min(r.lap, r.totalLaps),
       r.totalLaps,
