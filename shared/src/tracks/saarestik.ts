@@ -67,6 +67,11 @@ export const saarestik: TrackDef = {
     { t: 0.29, offset: -3, height: 2.1, length: 13 },
     { t: 0.735, offset: 4, height: 2.4, length: 14 },
   ],
+  boosts: [
+    { t: 0.18, offset: -6, radius: 6, power: 8 },
+    { t: 0.51, offset: 7, radius: 5.5, power: 8 },
+    { t: 0.83, offset: -7, radius: 6, power: 9 },
+  ],
   obstacles: [
     { kind: "kivi", t: 0.07, offset: 10, scale: 1.3 },
     { kind: "kivi", t: 0.13, offset: -12 },

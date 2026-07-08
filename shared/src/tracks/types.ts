@@ -26,6 +26,15 @@ export interface RampDef {
   height?: number;
 }
 
+export interface BoostDef {
+  t: number;
+  /** külgnihe splaini normaali suunas (m) */
+  offset: number;
+  radius?: number;
+  /** lisakiirus m/s sõidusuunas */
+  power?: number;
+}
+
 export type ObstacleKind = "kivi" | "palk";
 
 export interface ObstacleDef {
@@ -79,6 +88,7 @@ export interface TrackDef {
   };
   gates: GateDef[];
   ramps: RampDef[];
+  boosts?: BoostDef[];
   obstacles: ObstacleDef[];
   props: PropDef[];
   /** puude tihedus saartel (0 = pole) */

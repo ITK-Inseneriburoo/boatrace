@@ -69,6 +69,11 @@ export const joekanjon: TrackDef = {
     { t: 0.62, offset: -3, height: 2.0, length: 12 },
     { t: 0.9, offset: 4, height: 2.3, length: 13 },
   ],
+  boosts: [
+    { t: 0.12, offset: -4, radius: 5, power: 7 },
+    { t: 0.48, offset: 5, radius: 5, power: 8 },
+    { t: 0.78, offset: -5, radius: 5, power: 8 },
+  ],
   obstacles: [
     { kind: "kivi", t: 0.03, offset: -8, scale: 1.4 },
     { kind: "kivi", t: 0.08, offset: 9 },

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { TrackDef } from "@shared/tracks";
-import type { WaveSet } from "@shared/waves";
+import { getWaveHeight, type WaveSet } from "@shared/waves";
 import { mulberry32 } from "@shared/math";
 import { Terrain } from "./Terrain";
 import { BuoyField, type BuoyInstance } from "./props/Buoys";
@@ -24,6 +24,18 @@ export interface Gate {
   right: THREE.Vector2;
 }
 
+export interface BoostPad {
+  index: number;
+  x: number;
+  z: number;
+  dirX: number;
+  dirZ: number;
+  radius: number;
+  power: number;
+  phase: number;
+  mesh: THREE.Group;
+}
+
 /**
  * Ehitab rajadefinitsioonist maailma: maastik, väravad (poipaarid),
  * rambid, takistused, propid, kollisioonid, spawn-punktid.
@@ -34,6 +46,7 @@ export class TrackWorld {
   readonly gates: Gate[] = [];
   readonly colliders: ColliderSet = { circles: [], segments: [] };
   readonly ramps: RampInstance[] = [];
+  readonly boosts: BoostPad[] = [];
   readonly curve: THREE.CatmullRomCurve3;
   /** minimapi jaoks */
   readonly polyline: THREE.Vector2[] = [];
@@ -168,6 +181,46 @@ export class TrackWorld {
       this.group.add(buildRampMesh(inst));
     }
 
+    // Kiirusboostid: risk-reward liinid kurvidest väljumiseks
+    const boostMat = new THREE.MeshStandardMaterial({
+      color: 0xffd166,
+      emissive: 0xff9f1c,
+      emissiveIntensity: 0.55,
+      roughness: 0.38,
+      transparent: true,
+      opacity: 0.88,
+    });
+    const ringGeo = new THREE.TorusGeometry(1, 0.065, 8, 36);
+    const arrowGeo = new THREE.ConeGeometry(0.65, 1.5, 3);
+    (def.boosts ?? []).forEach((bd, index) => {
+      const p = this.curve.getPointAt(bd.t);
+      const tangent = this.curve.getTangentAt(bd.t).normalize();
+      const nx = tangent.z, nz = -tangent.x;
+      const radius = bd.radius ?? 5.5;
+      const mesh = new THREE.Group();
+      const ring = new THREE.Mesh(ringGeo, boostMat);
+      ring.scale.setScalar(radius);
+      ring.rotation.x = Math.PI / 2;
+      const arrow = new THREE.Mesh(arrowGeo, boostMat);
+      arrow.position.y = 0.45;
+      arrow.rotation.x = Math.PI / 2;
+      mesh.add(ring, arrow);
+      mesh.position.set(p.x + nx * bd.offset, 0, p.z + nz * bd.offset);
+      mesh.rotation.y = Math.atan2(tangent.x, tangent.z);
+      this.boosts.push({
+        index,
+        x: mesh.position.x,
+        z: mesh.position.z,
+        dirX: tangent.x,
+        dirZ: tangent.z,
+        radius,
+        power: bd.power ?? 8,
+        phase: rnd() * Math.PI * 2,
+        mesh,
+      });
+      this.group.add(mesh);
+    });
+
     // Takistused
     const placed: PlacedObstacle[] = def.obstacles.map((o) => {
       const p = this.curve.getPointAt(o.t);
@@ -248,6 +301,12 @@ export class TrackWorld {
     this.punaneField.update(waves, time, nextGate);
     this.rohelineField.update(waves, time, nextGate);
     this.startField.update(waves, time, nextGate === 0 ? 0 : -1);
+    for (const b of this.boosts) {
+      const y = getWaveHeight(waves, b.x, b.z, time);
+      b.mesh.position.y = y + 0.28 + Math.sin(time * 2.1 + b.phase) * 0.08;
+      const pulse = 1 + Math.sin(time * 5.5 + b.phase) * 0.06;
+      b.mesh.scale.setScalar(pulse);
+    }
     updateFlags(this.group, time);
   }
 }

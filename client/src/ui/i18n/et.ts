@@ -32,6 +32,7 @@ const et = {
   "hud.rekord": "UUS REKORD!",
   "hud.start": "START!",
   "hud.finis": "FINIŠ!",
+  "hud.boost": "HOOG!",
   "hud.respawn": "Ctrl — boost · R — tagasi rajale · H — juhtimine · Esc — paus",
   "paus.pealkiri": "Paus",
   "paus.jatka": "Jätka",

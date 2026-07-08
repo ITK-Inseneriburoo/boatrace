@@ -72,6 +72,11 @@ export const fjord: TrackDef = {
     { t: 0.66, offset: 0, height: 3.3, length: 18 },
     { t: 0.85, offset: -4, height: 2.5, length: 14 },
   ],
+  boosts: [
+    { t: 0.2, offset: 5, radius: 5.5, power: 9 },
+    { t: 0.55, offset: -5, radius: 5.5, power: 9 },
+    { t: 0.88, offset: 4, radius: 5, power: 10 },
+  ],
   obstacles: [
     { kind: "kivi", t: 0.07, offset: 8, scale: 1.5 },
     { kind: "kivi", t: 0.15, offset: -9, scale: 1.2 },

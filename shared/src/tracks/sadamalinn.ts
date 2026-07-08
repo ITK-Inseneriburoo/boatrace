@@ -68,6 +68,11 @@ export const sadamalinn: TrackDef = {
     { t: 0.33, offset: 3, height: 2.2, length: 13 },
     { t: 0.68, offset: -4, height: 2.5, length: 14 },
   ],
+  boosts: [
+    { t: 0.16, offset: 5, radius: 5.5, power: 8 },
+    { t: 0.42, offset: -6, radius: 5, power: 9 },
+    { t: 0.73, offset: 6, radius: 5.5, power: 8 },
+  ],
   obstacles: [
     { kind: "palk", t: 0.08, offset: 8 },
     { kind: "kivi", t: 0.2, offset: -10, scale: 1.2 },

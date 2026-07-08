@@ -68,6 +68,7 @@ export class Game {
   private paused = false;
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
+  private boostCooldown = new Map<number, number>();
 
   // --- Efektid ---
   private effects = new Effects();
@@ -243,6 +244,7 @@ export class Game {
     this.engine.scene.remove(this.track.group);
     this.track = new TrackWorld(getTrack(id));
     this.engine.scene.add(this.track.group);
+    this.boostCooldown.clear();
     this.attachTrackDeps();
   }
 
@@ -292,6 +294,7 @@ export class Game {
     this.screens.show(null);
     this.hud.show();
     this.gateArrow.visible = true;
+    this.boostCooldown.clear();
     this.state = "countdown";
     this.countdownT = 3.999;
     this.lastCountShown = -1;
@@ -469,6 +472,7 @@ export class Game {
     this.mpFinished = false;
     this.standings = [];
     this.sendAccum = 0;
+    this.boostCooldown.clear();
     this.lastCountShown = -1;
 
     this.screens.show(null);
@@ -704,6 +708,7 @@ export class Game {
         this.chaseCam.addTrauma(Math.min(hit.impact * 0.05, 0.6));
         this.sfx.thunk(hit.impact * 0.12);
       }
+      this.checkBoosts();
 
       // Paat-paadi vastu: pehme ringtõrjumine ainult oma paadile
       for (const rb of this.remoteBoats.values()) {
@@ -892,6 +897,30 @@ export class Game {
     }
 
     this.input.endFrame();
+  }
+
+  private checkBoosts(): void {
+    if (!this.boat || !this.track.boosts.length || this.paused) return;
+    const p = this.boat.physics;
+    const now = this.engine.simTime;
+    for (const b of this.track.boosts) {
+      if ((this.boostCooldown.get(b.index) ?? 0) > now) continue;
+      const dx = p.pos.x - b.x;
+      const dz = p.pos.z - b.z;
+      if (Math.hypot(dx, dz) > b.radius) continue;
+
+      const forwardSpeed = p.vel.x * b.dirX + p.vel.z * b.dirZ;
+      const cappedPower = Math.max(3, Math.min(b.power, p.stats.topSpeed * 1.28 - forwardSpeed));
+      p.vel.x += b.dirX * cappedPower;
+      p.vel.z += b.dirZ * cappedPower;
+      p.speed = Math.hypot(p.vel.x, p.vel.z);
+      this.boostCooldown.set(b.index, now + 1.25);
+      this.chaseCam.addTrauma(0.18);
+      this.sfx.chime();
+      this.hud.flashCenter(t("hud.boost"), 0.55);
+      this.effects.burst(p.pos.x, p.pos.z, 0.45, this.weather.waves, now);
+      break;
+    }
   }
 
   private updateHud(frameDt: number): void {
