@@ -17,6 +17,7 @@ export class RaceLogic {
   wrongWay = false;
 
   onGate: (gateIndex: number) => void = () => {};
+  onMissGate: (gateIndex: number) => void = () => {};
   onLap: (lap: number, lapTimeMs: number) => void = () => {};
   onFinish: (totalMs: number) => void = () => {};
 
@@ -61,6 +62,8 @@ export class RaceLogic {
       const lat = Math.abs(latX * nx + latZ * nz);
       if (lat <= gate.width / 2 + 2.5) {
         this.passGate(gi);
+      } else if (lat <= gate.width / 2 + 16) {
+        this.onMissGate(gi);
       }
     }
     this.prevSigned.set(gi, signed);

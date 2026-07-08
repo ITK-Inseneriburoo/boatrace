@@ -23,7 +23,7 @@ import { MainMenu, type GraphicsLevel, type MenuChoices } from "./ui/screens/Mai
 import { ResultsScreen, type ResultRow, type ResultsMeta } from "./ui/screens/Results";
 import { LobbyBrowser } from "./ui/screens/LobbyBrowser";
 import { RoomScreen } from "./ui/screens/RoomScreen";
-import { Hud } from "./ui/screens/Hud";
+import { Hud, type SpectatorRow } from "./ui/screens/Hud";
 import { t, type TKey } from "./ui/i18n/et";
 import type { MinimapDot } from "./ui/Minimap";
 import { AudioEngine } from "./audio/AudioEngine";
@@ -276,6 +276,7 @@ export class Game {
 
     this.race = new RaceLogic(this.track, c.laps);
     this.race.onGate = () => this.sfx.chime();
+    this.race.onMissGate = () => this.hud.flashCenter(t("hud.varavMoodas"), 0.8);
     this.race.onLap = (_lap, ms) => {
       const previousBest = this.ghostBestMs;
       const record = this.ghostRecorder?.finishLap(ms) ?? false;
@@ -455,6 +456,7 @@ export class Game {
         this.net?.send({ type: "gate", gate });
         this.sfx.chime();
       };
+      this.race.onMissGate = () => this.hud.flashCenter(t("hud.varavMoodas"), 0.8);
     }
 
     // Kaugpaadid stardikohtadele — ainult võistlejad (spawns-i liikmed)
@@ -643,6 +645,7 @@ export class Game {
   private respawn(): void {
     if (!this.boat || !this.race) return;
     this.ghostRecorder?.markDirty();
+    if (this.mode === "solo") this.hud.flashCenter(t("hud.puhasRingRikutud"), 0.9);
     const g = this.race.lastGate;
     this.boat.physics.reset(g.center.x, g.center.z, Math.atan2(g.dirX, g.dirZ));
     this.boat.physics.pos.y = getWaveHeight(
@@ -951,9 +954,19 @@ export class Game {
     if (this.spectating) {
       // Vaatleja: ainult minimap + keskteated
       const dots: MinimapDot[] = [];
+      const playersById = new Map((this.room?.players ?? []).map((p) => [p.id, p]));
+      const rows: SpectatorRow[] = [];
       for (const rb of this.remoteBoats.values()) {
         dots.push({ x: rb.x, z: rb.z, yaw: rb.yaw, color: "#ffb3ba", me: false });
+        const idx = this.standings.indexOf(rb.playerId);
+        rows.push({
+          name: playersById.get(rb.playerId)?.name ?? rb.playerId,
+          position: idx >= 0 ? idx + 1 : null,
+          speedKmh: rb.speed * 3.6,
+        });
       }
+      rows.sort((a, b) => (a.position ?? 99) - (b.position ?? 99));
+      this.hud.setSpectatorRows(rows);
       this.hud.update(frameDt, dots);
       return;
     }

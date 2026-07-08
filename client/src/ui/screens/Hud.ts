@@ -13,6 +13,12 @@ export function formatMs(ms: number): string {
   return `${m}:${String(s).padStart(2, "0")}.${d}`;
 }
 
+export interface SpectatorRow {
+  name: string;
+  position: number | null;
+  speedKmh: number;
+}
+
 /** Sõiduaegne HUD: kiirus, ring, koht, ajad, minimap, teated */
 export class Hud {
   readonly el: HTMLElement;
@@ -26,6 +32,7 @@ export class Hud {
   private wrongEl: HTMLElement;
   private centerEl: HTMLElement;
   private hintEl: HTMLElement;
+  private spectatorEl: HTMLElement;
   private minimap: Minimap | null = null;
   private centerTimer = 0;
   private legendEl: HTMLElement;
@@ -51,7 +58,9 @@ export class Hud {
     this.wrongEl = h("div", { class: "hud-item", id: "hud-wrongway" }, t("hud.valesuund"));
     this.centerEl = h("div", { class: "hud-item", id: "hud-center" });
     this.hintEl = h("div", { class: "hud-item", id: "hud-hint" }, t("hud.respawn"));
+    this.spectatorEl = h("div", { class: "hud-item panel", id: "hud-spectator" });
     this.wrongEl.style.display = "none";
+    this.spectatorEl.style.display = "none";
 
     // Pausimenüü (Esc)
     const resumeBtn = h("button", { class: "primary" }, t("paus.jatka")) as HTMLButtonElement;
@@ -97,6 +106,7 @@ export class Hud {
       this.timesEl,
       this.ghostEl,
       this.posEl,
+      this.spectatorEl,
       this.wrongEl,
       this.centerEl,
       this.hintEl,
@@ -137,7 +147,27 @@ export class Hud {
     this.timesEl.style.display = d;
     this.ghostEl.style.display = d;
     this.posEl.style.display = d;
+    this.spectatorEl.style.display = on ? "" : "none";
     this.hintEl.textContent = on && legend ? legend : t("hud.respawn");
+  }
+
+  setSpectatorRows(rows: SpectatorRow[]): void {
+    if (!rows.length) {
+      this.spectatorEl.replaceChildren(h("div", { class: "spec-empty" }, t("hud.ootabPaate")));
+      return;
+    }
+    this.spectatorEl.replaceChildren(
+      h("div", { class: "spec-title" }, t("hud.vaatleja")),
+      ...rows.map((r) =>
+        h(
+          "div",
+          { class: "spec-row" },
+          h("span", { class: "spec-pos" }, r.position === null ? "–" : `${r.position}.`),
+          h("span", { class: "spec-name" }, r.name),
+          h("span", { class: "spec-speed" }, `${Math.round(r.speedKmh)} km/h`),
+        ),
+      ),
+    );
   }
 
   setSpeed(kmh: number): void {

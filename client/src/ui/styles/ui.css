@@ -304,6 +304,36 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
   color: var(--text-dim);
   font-size: 0.85rem;
 }
+#hud-spectator {
+  right: 24px;
+  top: 22px;
+  width: 260px;
+  padding: 12px 14px;
+}
+.spec-title {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.spec-empty { color: var(--text-dim); font-size: 0.9rem; }
+.spec-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 68px;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.spec-row + .spec-row { margin-top: 5px; }
+.spec-pos { color: var(--accent); font-weight: 800; }
+.spec-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spec-speed { color: var(--text-dim); text-align: right; }
 #minimap {
   position: absolute;
   left: 20px;
