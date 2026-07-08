@@ -25,6 +25,7 @@ const et = {
   "hud.ringiaeg": "Ring",
   "hud.parim": "Parim",
   "hud.valesuund": "VALE SUUND!",
+  "hud.rekord": "UUS REKORD!",
   "hud.start": "START!",
   "hud.finis": "FINIŠ!",
   "hud.respawn": "R — tagasi rajale · H — juhtimine",

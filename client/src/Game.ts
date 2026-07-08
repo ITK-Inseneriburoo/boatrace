@@ -11,6 +11,7 @@ import { TrackWorld } from "./world/TrackBuilder";
 import { RaceLogic } from "./sim/RaceLogic";
 import { resolveCollisions } from "./sim/Collisions";
 import { RemoteBoat } from "./sim/RemoteBoat";
+import { GhostBoat, GhostRecorder, loadGhostData } from "./sim/Ghost";
 import { NetClient } from "./net/NetClient";
 import { getTrack } from "@shared/tracks";
 import { getWaveHeight } from "@shared/waves";
@@ -91,6 +92,10 @@ export class Game {
   /** Vaatleja-režiim: ei võistle, vaba kaamera */
   private spectating = false;
   private spectatorCam: SpectatorCamera;
+
+  // --- Kummituspaat (soolo parim ring) ---
+  private ghostRecorder: GhostRecorder | null = null;
+  private ghostBoat: GhostBoat | null = null;
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.engine = new Engine(canvas);
@@ -243,9 +248,25 @@ export class Game {
     this.applyWeather(WEATHERS[c.weather]);
     this.spawnOwnBoat(c.vehicle, c.color, 0);
 
+    // Kummituspaat: eelmine parim ring sõidab kaasa
+    this.ghostBoat?.dispose();
+    this.ghostBoat = null;
+    const ghostData = loadGhostData(c.track);
+    if (ghostData) {
+      this.ghostBoat = new GhostBoat(ghostData);
+      this.engine.scene.add(this.ghostBoat.mesh);
+    }
+    this.ghostRecorder = new GhostRecorder(c.track, c.vehicle);
+
     this.race = new RaceLogic(this.track, c.laps);
     this.race.onGate = () => this.sfx.chime();
-    this.race.onLap = (_lap, ms) => this.hud.flashCenter(`${(ms / 1000).toFixed(1)}s`, 1.6);
+    this.race.onLap = (_lap, ms) => {
+      const record = this.ghostRecorder?.finishLap(ms) ?? false;
+      this.hud.flashCenter(
+        record ? `${(ms / 1000).toFixed(1)}s · ${t("hud.rekord")}` : `${(ms / 1000).toFixed(1)}s`,
+        record ? 2.2 : 1.6,
+      );
+    };
     this.race.onFinish = () => {
       this.hud.flashCenter(t("hud.finis"), 2.5);
       this.finishTimer = 2.6;
@@ -496,6 +517,8 @@ export class Game {
     this.gateArrow.visible = false;
     this.clearRemoteBoats();
     this.stopRaceAudio();
+    this.ghostBoat?.dispose();
+    this.ghostBoat = null;
     this.screens.show(this.menu);
   }
 
@@ -522,6 +545,7 @@ export class Game {
 
   private respawn(): void {
     if (!this.boat || !this.race) return;
+    this.ghostRecorder?.markDirty();
     const g = this.race.lastGate;
     this.boat.physics.reset(g.center.x, g.center.z, Math.atan2(g.dirX, g.dirZ));
     this.boat.physics.pos.y = getWaveHeight(
@@ -564,6 +588,7 @@ export class Game {
       if (canStart) {
         this.state = "racing";
         this.race?.start();
+        this.ghostRecorder?.startLap();
         this.hud.flashCenter(t("hud.start"), 1);
         this.sfx.countBlip(true);
       }
@@ -621,6 +646,11 @@ export class Game {
         dt,
       );
 
+      // Kummituse salvestus (ainult soolo)
+      if (this.mode === "solo" && this.ghostRecorder && !this.race.finished) {
+        this.ghostRecorder.record(this.boat.physics, dt);
+      }
+
       // Olekusaatmine 15Hz
       if (this.mode === "mp" && this.net) {
         this.sendAccum += dt;
@@ -675,6 +705,12 @@ export class Game {
     if (this.net && this.remoteBoats.size) {
       const now = this.net.serverNow();
       for (const rb of this.remoteBoats.values()) rb.update(now);
+    }
+
+    // Kummituspaat mängib parimat ringi
+    if (this.ghostBoat && this.race && this.state === "racing" && this.race.running) {
+      this.ghostBoat.update(this.race.raceTime - this.race.lapStartTime);
+      this.ghostBoat.mesh.visible = !this.race.finished;
     }
 
     // --- Heli ---

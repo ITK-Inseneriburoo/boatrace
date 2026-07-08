@@ -6,9 +6,10 @@ faili — ka helid on sünteesitud).
 
 ## Võimalused
 
-- **3 rada**: Saarestik (männisaared ja kanalid), Sadamalinn (tööstussadam —
+- **4 rada**: Saarestik (männisaared ja kanalid), Sadamalinn (tööstussadam —
   portaalkraanad, konteineriterminal, kaubalaevad, laohooned, muulid),
-  Jõekanjon (kitsas kanjon hoovuse ja kaljudega)
+  Jõekanjon (kitsas kanjon hoovuse ja kaljudega), Fjord (lumised
+  kaljuseinad ja viis hüpperampi)
 - **3 ilma**: päikseline, torm (vihm, välk, suured lained), udune õhtu
 - **5 sõidukit**: Kiirpaat, Võidusõidukaater, Kalapaat, Jett, Sportjett —
   igaühel oma kiirus, kiirendus ja triivikäitumine
@@ -17,9 +18,16 @@ faili — ka helid on sünteesitud).
 - **Multiplayer**: võistlustoad kuni 8 mängijale, sünkroonne start,
   live-edetabel, serveripoolne aja- ja tulemuste arvestus, chat,
   reconnect 60 s jooksul
+- **Vaatleja-režiim**: liitu toaga (või käimasoleva sõiduga) vaatlejana —
+  vaba pealtvaate-kaamera (WASD, Q/E kõrgus) või järgne paatidele (Tab)
+- **Kummituspaat**: soolosõidus kordab su parim ring poolläbipaistva
+  paadina — võistle iseendaga (salvestub raja kaupa brauserisse)
 - **Heli**: sünteesitud mootorihelid (dopleriga kaugpaatidel), pritsmed,
   väravakellad, kõuemürin, ilmapõhine taust (tuul/vihm/kajakad)
-- Eestikeelne kasutajaliides
+- **Mudelid**: Kenney watercraft kit (CC0) paadid/laevad/konteinerid/
+  finišikaar, protseduuriline varuvariant kui failid puuduvad
+- Eestikeelne kasutajaliides, ITK Inseneribüroo bränding (lipud, bännerid,
+  laosildid), juhtimisklahvide legend (menüüs ja sõidus H-klahviga)
 
 ## Juhtimine
 
