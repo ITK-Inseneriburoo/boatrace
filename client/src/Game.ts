@@ -98,6 +98,7 @@ export class Game {
   // --- Kummituspaat (soolo parim ring) ---
   private ghostRecorder: GhostRecorder | null = null;
   private ghostBoat: GhostBoat | null = null;
+  private ghostBestMs: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.engine = new Engine(canvas);
@@ -259,19 +260,27 @@ export class Game {
     // Kummituspaat: eelmine parim ring sõidab kaasa
     this.ghostBoat?.dispose();
     this.ghostBoat = null;
-    const ghostData = loadGhostData(c.track);
+    const ghostData = loadGhostData(c.track, c.weather, c.vehicle);
+    this.ghostBestMs = ghostData?.lapMs ?? null;
+    this.hud.setGhostDelta(null, this.ghostBestMs);
     if (ghostData) {
       this.ghostBoat = new GhostBoat(ghostData);
       this.engine.scene.add(this.ghostBoat.mesh);
     }
-    this.ghostRecorder = new GhostRecorder(c.track, c.vehicle);
+    this.ghostRecorder = new GhostRecorder(c.track, c.weather, c.vehicle);
 
     this.race = new RaceLogic(this.track, c.laps);
     this.race.onGate = () => this.sfx.chime();
     this.race.onLap = (_lap, ms) => {
+      const previousBest = this.ghostBestMs;
       const record = this.ghostRecorder?.finishLap(ms) ?? false;
+      if (record) this.ghostBestMs = ms;
+      const delta =
+        previousBest !== null && isFinite(previousBest) ? ` (${ms - previousBest <= 0 ? "−" : "+"}${(Math.abs(ms - previousBest) / 1000).toFixed(2)}s)` : "";
       this.hud.flashCenter(
-        record ? `${(ms / 1000).toFixed(1)}s · ${t("hud.rekord")}` : `${(ms / 1000).toFixed(1)}s`,
+        record
+          ? `${(ms / 1000).toFixed(1)}s · ${t("hud.rekord")}${delta}`
+          : `${(ms / 1000).toFixed(1)}s${delta}`,
         record ? 2.2 : 1.6,
       );
     };
@@ -577,6 +586,8 @@ export class Game {
     this.stopRaceAudio();
     this.ghostBoat?.dispose();
     this.ghostBoat = null;
+    this.ghostBestMs = null;
+    this.hud.setGhostDelta(null, null);
     this.screens.show(this.menu);
   }
 
@@ -908,6 +919,15 @@ export class Game {
       r.lapTimes.length ? r.lapTimes[r.lapTimes.length - 1] : null,
       r.bestLap,
     );
+    if (this.mode === "solo" && this.ghostBestMs !== null && !r.finished) {
+      const progress = this.track.nearestProgress(b.physics.pos.x, b.physics.pos.z);
+      const lapElapsedMs = (r.raceTime - r.lapStartTime) * 1000;
+      const deltaMs =
+        progress > 0.04 ? lapElapsedMs - this.ghostBestMs * progress : null;
+      this.hud.setGhostDelta(deltaMs, this.ghostBestMs);
+    } else {
+      this.hud.setGhostDelta(null, null);
+    }
 
     if (this.mode === "mp" && this.net) {
       const idx = this.standings.indexOf(this.net.playerId ?? "");

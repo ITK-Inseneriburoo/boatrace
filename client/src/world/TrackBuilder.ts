@@ -230,6 +230,20 @@ export class TrackWorld {
     return [dx / len, dz / len];
   }
 
+  /** Lähima splainipunkti põhjal ligikaudne edenemine ringil [0..1). */
+  nearestProgress(x: number, z: number): number {
+    let bestD = Infinity, bestI = 0;
+    for (let i = 0; i < this.polyline.length; i += 2) {
+      const p = this.polyline[i];
+      const d = (p.x - x) * (p.x - x) + (p.y - z) * (p.y - z);
+      if (d < bestD) {
+        bestD = d;
+        bestI = i;
+      }
+    }
+    return bestI / this.polyline.length;
+  }
+
   update(waves: WaveSet, time: number, nextGate: number): void {
     this.punaneField.update(waves, time, nextGate);
     this.rohelineField.update(waves, time, nextGate);

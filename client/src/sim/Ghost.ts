@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { TrackId, VehicleId } from "@shared/types";
+import type { TrackId, VehicleId, WeatherId } from "@shared/types";
 import { angleLerp, lerp } from "@shared/math";
 import { buildBoatModel } from "../boats/BoatFactory";
 import type { BoatPhysics } from "./BoatPhysics";
@@ -7,21 +7,26 @@ import type { BoatPhysics } from "./BoatPhysics";
 /** Üks salvestuspunkt: [aeg s, x, y, z, yaw, pitch, roll] */
 type Sample = [number, number, number, number, number, number, number];
 
-interface GhostData {
+export interface GhostData {
   vehicle: VehicleId;
+  weather: WeatherId;
   lapMs: number;
   samples: Sample[];
 }
 
 const SAMPLE_HZ = 15;
 
-function key(trackId: TrackId): string {
-  return `boatrace.ghost.${trackId}`;
+function key(trackId: TrackId, weatherId: WeatherId, vehicle: VehicleId): string {
+  return `boatrace.ghost.${trackId}.${weatherId}.${vehicle}`;
 }
 
-export function loadGhostData(trackId: TrackId): GhostData | null {
+export function loadGhostData(
+  trackId: TrackId,
+  weatherId: WeatherId,
+  vehicle: VehicleId,
+): GhostData | null {
   try {
-    const raw = localStorage.getItem(key(trackId));
+    const raw = localStorage.getItem(key(trackId, weatherId, vehicle));
     if (!raw) return null;
     const d = JSON.parse(raw) as GhostData;
     if (!Array.isArray(d.samples) || d.samples.length < 4) return null;
@@ -43,6 +48,7 @@ export class GhostRecorder {
 
   constructor(
     private trackId: TrackId,
+    private weatherId: WeatherId,
     private vehicle: VehicleId,
   ) {}
 
@@ -80,12 +86,17 @@ export class GhostRecorder {
     const samples = this.samples;
     this.startLap();
     if (wasDirty || samples.length < 4) return false;
-    const existing = loadGhostData(this.trackId);
+    const existing = loadGhostData(this.trackId, this.weatherId, this.vehicle);
     if (existing && existing.lapMs <= lapMs) return false;
     try {
       localStorage.setItem(
-        key(this.trackId),
-        JSON.stringify({ vehicle: this.vehicle, lapMs, samples } satisfies GhostData),
+        key(this.trackId, this.weatherId, this.vehicle),
+        JSON.stringify({
+          vehicle: this.vehicle,
+          weather: this.weatherId,
+          lapMs,
+          samples,
+        } satisfies GhostData),
       );
       return true;
     } catch {

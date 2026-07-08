@@ -261,6 +261,16 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
   font-variant-numeric: tabular-nums;
   white-space: pre-line;
 }
+#hud-ghost {
+  left: 24px;
+  top: 124px;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  white-space: pre-line;
+}
+#hud-ghost.ahead { color: #8fffd1; }
+#hud-ghost.behind { color: #ffd28b; }
 #hud-pos {
   right: 28px;
   top: 20px;

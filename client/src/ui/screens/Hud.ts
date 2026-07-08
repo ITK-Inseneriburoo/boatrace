@@ -21,6 +21,7 @@ export class Hud {
   private boostFill: HTMLElement;
   private lapEl: HTMLElement;
   private timesEl: HTMLElement;
+  private ghostEl: HTMLElement;
   private posEl: HTMLElement;
   private wrongEl: HTMLElement;
   private centerEl: HTMLElement;
@@ -45,6 +46,7 @@ export class Hud {
     );
     this.lapEl = h("div", { class: "hud-item", id: "hud-lap" });
     this.timesEl = h("div", { class: "hud-item", id: "hud-times" });
+    this.ghostEl = h("div", { class: "hud-item", id: "hud-ghost" });
     this.posEl = h("div", { class: "hud-item", id: "hud-pos" });
     this.wrongEl = h("div", { class: "hud-item", id: "hud-wrongway" }, t("hud.valesuund"));
     this.centerEl = h("div", { class: "hud-item", id: "hud-center" });
@@ -93,6 +95,7 @@ export class Hud {
       this.boostEl,
       this.lapEl,
       this.timesEl,
+      this.ghostEl,
       this.posEl,
       this.wrongEl,
       this.centerEl,
@@ -132,6 +135,7 @@ export class Hud {
     this.boostEl.style.display = d;
     this.lapEl.style.display = d;
     this.timesEl.style.display = d;
+    this.ghostEl.style.display = d;
     this.posEl.style.display = d;
     this.hintEl.textContent = on && legend ? legend : t("hud.respawn");
   }
@@ -157,6 +161,25 @@ export class Hud {
     if (lastLapMs !== null) s += `\n${t("hud.ringiaeg")} ${formatMs(lastLapMs)}`;
     if (isFinite(bestMs)) s += `\n${t("hud.parim")} ${formatMs(bestMs)}`;
     this.timesEl.textContent = s;
+  }
+
+  setGhostDelta(deltaMs: number | null, bestMs: number | null): void {
+    if (bestMs === null || !isFinite(bestMs)) {
+      this.ghostEl.textContent = "";
+      this.ghostEl.style.display = "none";
+      return;
+    }
+    let s = `${t("hud.parim")} ${formatMs(bestMs)}`;
+    if (deltaMs !== null && isFinite(deltaMs)) {
+      const sign = deltaMs <= 0 ? "−" : "+";
+      s += `\n${t("hud.vahe")} ${sign}${formatMs(Math.abs(deltaMs))}`;
+      this.ghostEl.classList.toggle("ahead", deltaMs <= 0);
+      this.ghostEl.classList.toggle("behind", deltaMs > 0);
+    } else {
+      this.ghostEl.classList.remove("ahead", "behind");
+    }
+    this.ghostEl.textContent = s;
+    this.ghostEl.style.display = "";
   }
 
   setPosition(pos: number | null, total: number): void {

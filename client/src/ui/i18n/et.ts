@@ -27,6 +27,7 @@ const et = {
   "hud.aeg": "Aeg",
   "hud.ringiaeg": "Ring",
   "hud.parim": "Parim",
+  "hud.vahe": "Vahe",
   "hud.valesuund": "VALE SUUND!",
   "hud.rekord": "UUS REKORD!",
   "hud.start": "START!",
