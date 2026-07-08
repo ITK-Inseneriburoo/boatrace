@@ -51,15 +51,21 @@ export class MainMenu implements Screen {
       const saved = JSON.parse(localStorage.getItem(LS_KEY) ?? "{}");
       Object.assign(this.choices, saved);
     } catch { /* tühi */ }
+    this.choices.laps = this.choices.laps || TRACKS[this.choices.track]?.defaultLaps || 3;
 
     this.nameInput = h("input", { type: "text", placeholder: t("menu.nimi.placeholder"), maxlength: "20" });
     this.nameInput.value = this.choices.name;
+
+    const selectByData = (items: HTMLElement[], key: string, value: string): void => {
+      for (const e of items) e.classList.toggle("selected", e.dataset[key] === value);
+    };
 
     // Värvivalik
     const swatches = h("div", { class: "row" });
     const swatchEls: HTMLElement[] = [];
     for (const c of PLAYER_COLORS) {
       const sw = h("div", { class: "swatch" });
+      sw.dataset.color = String(c);
       sw.style.background = `#${c.toString(16).padStart(6, "0")}`;
       if (c === this.choices.color) sw.classList.add("selected");
       sw.onclick = () => {
@@ -89,6 +95,7 @@ export class MainMenu implements Screen {
         h("div", { class: "vdesc" }, v.kirjeldus),
         h("div", { class: "vstats" }, bar(v.topSpeed / 35), bar(v.accel / 11), bar(v.grip)),
       );
+      card.dataset.vehicle = id;
       if (id === this.choices.vehicle) card.classList.add("selected");
       card.onclick = () => {
         cardEls.forEach((e) => e.classList.remove("selected"));
@@ -103,14 +110,21 @@ export class MainMenu implements Screen {
     // Rajavalik
     const tracks = h("div", { class: "row" });
     const trEls: HTMLElement[] = [];
+    const lapEls: HTMLElement[] = [];
     for (const id of TRACK_IDS) {
       const chip = h("div", { class: "chip" }, TRACKS[id]!.nimi);
+      chip.dataset.track = id;
       chip.title = TRACKS[id]!.kirjeldus;
       if (id === this.choices.track) chip.classList.add("selected");
       chip.onclick = () => {
+        const oldDefault = TRACKS[this.choices.track]?.defaultLaps;
         trEls.forEach((e) => e.classList.remove("selected"));
         chip.classList.add("selected");
         this.choices.track = id;
+        if (this.choices.laps === oldDefault) {
+          this.choices.laps = TRACKS[id]?.defaultLaps ?? this.choices.laps;
+          selectByData(lapEls, "laps", String(this.choices.laps));
+        }
         this.persist();
         this.onTrack(id);
       };
@@ -123,6 +137,7 @@ export class MainMenu implements Screen {
     const wEls: HTMLElement[] = [];
     for (const w of Object.values(WEATHERS)) {
       const chip = h("div", { class: "chip" }, w.nimi);
+      chip.dataset.weather = w.id;
       if (w.id === this.choices.weather) chip.classList.add("selected");
       chip.onclick = () => {
         wEls.forEach((e) => e.classList.remove("selected"));
@@ -140,6 +155,7 @@ export class MainMenu implements Screen {
     const gEls: HTMLElement[] = [];
     for (const level of ["korge", "keskmine", "madal"] as GraphicsLevel[]) {
       const chip = h("div", { class: "chip" }, t(`menu.grafika.${level}` as never));
+      chip.dataset.graphics = level;
       if (level === this.choices.graphics) chip.classList.add("selected");
       chip.onclick = () => {
         gEls.forEach((e) => e.classList.remove("selected"));
@@ -152,6 +168,21 @@ export class MainMenu implements Screen {
       gfx.appendChild(chip);
     }
 
+    const laps = h("div", { class: "row" });
+    for (const n of [1, 2, 3, 5]) {
+      const chip = h("div", { class: "chip" }, String(n));
+      chip.dataset.laps = String(n);
+      if (n === this.choices.laps) chip.classList.add("selected");
+      chip.onclick = () => {
+        lapEls.forEach((e) => e.classList.remove("selected"));
+        chip.classList.add("selected");
+        this.choices.laps = n;
+        this.persist();
+      };
+      lapEls.push(chip);
+      laps.appendChild(chip);
+    }
+
     const soloBtn = h("button", { class: "primary" }, t("menu.proovisoit")) as HTMLButtonElement;
     soloBtn.onclick = () => {
       this.readName();
@@ -162,6 +193,33 @@ export class MainMenu implements Screen {
     this.mpButton.onclick = () => {
       this.readName();
       this.onMultiplayer({ ...this.choices });
+    };
+    const sprintBtn = h("button", {}, t("menu.sprint")) as HTMLButtonElement;
+    sprintBtn.onclick = () => {
+      this.choices.laps = 1;
+      selectByData(lapEls, "laps", "1");
+      this.persist();
+      this.readName();
+      this.onSolo({ ...this.choices });
+    };
+    const randomBtn = h("button", {}, t("menu.yllata")) as HTMLButtonElement;
+    randomBtn.onclick = () => {
+      const pick = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
+      const track = pick(TRACK_IDS);
+      const weather = pick(TRACKS[track]?.allowedWeathers ?? (Object.keys(WEATHERS) as MenuChoices["weather"][]));
+      this.choices.color = pick(PLAYER_COLORS);
+      this.choices.vehicle = pick(VEHICLE_IDS);
+      this.choices.track = track;
+      this.choices.weather = weather;
+      this.choices.laps = TRACKS[track]?.defaultLaps ?? 3;
+      selectByData(swatchEls, "color", String(this.choices.color));
+      selectByData(cardEls, "vehicle", this.choices.vehicle);
+      selectByData(trEls, "track", this.choices.track);
+      selectByData(wEls, "weather", this.choices.weather);
+      selectByData(lapEls, "laps", String(this.choices.laps));
+      this.persist();
+      this.onTrack(this.choices.track);
+      this.onWeather(this.choices.weather);
     };
 
     this.el = h(
@@ -181,16 +239,17 @@ export class MainMenu implements Screen {
           "div",
           { class: "panel center-wrap", style: "gap:16px" },
           h("div", { class: "field", style: "width:280px" }, h("label", {}, t("menu.nimi")), this.nameInput),
-          h("div", { class: "field" }, h("label", {}, t("menu.varv")), swatches),
-          h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles),
-          h("div", { class: "field" }, h("label", {}, t("menu.rada")), tracks),
-          h(
-            "div",
-            { class: "row", style: "gap:26px" },
-            h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
-            h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
-          ),
-          h("div", { class: "row", style: "margin-top:8px" }, soloBtn, this.mpButton),
+            h("div", { class: "field" }, h("label", {}, t("menu.varv")), swatches),
+            h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles),
+            h("div", { class: "field" }, h("label", {}, t("menu.rada")), tracks),
+            h(
+              "div",
+              { class: "row", style: "gap:26px" },
+              h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
+              h("div", { class: "field" }, h("label", {}, t("menu.ringe")), laps),
+              h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
+            ),
+          h("div", { class: "row", style: "margin-top:8px" }, soloBtn, this.mpButton, sprintBtn, randomBtn),
           (() => {
             const details = h("details", { style: "width:100%;color:var(--text)" });
             const summary = h(

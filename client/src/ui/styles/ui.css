@@ -119,6 +119,18 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
   color: var(--text-dim);
 }
 
+.notice {
+  width: 100%;
+  max-width: 680px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(255, 198, 87, 0.14);
+  border: 1px solid rgba(255, 198, 87, 0.34);
+  color: #ffe2a8;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 .chip {

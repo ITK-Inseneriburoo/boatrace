@@ -16,6 +16,8 @@ const et = {
   "menu.proovisoit": "Proovisõit",
   "menu.vorgumang": "Mängi võrgus",
   "menu.tulekul": "tuleb varsti",
+  "menu.sprint": "1 ringi sprint",
+  "menu.yllata": "Üllata mind",
 
   "hud.ring": "Ring",
   "hud.varav": "Värav",
@@ -56,6 +58,7 @@ const et = {
   "lobby.tyhi": "Ühtegi tuba pole — loo esimene!",
   "lobby.yhendus": "Ühendun serveriga…",
   "lobby.katkes": "Ühendus katkes — proovin uuesti…",
+  "lobby.soidab": "Sõit käib",
 
   "tuba.valmis": "Valmis",
   "tuba.pole_valmis": "Pole valmis",
@@ -68,6 +71,20 @@ const et = {
   "tuba.host": "host",
   "tuba.ootab": "Ootab mängijaid…",
   "tuba.chat.placeholder": "Kirjuta sõnum…",
+  "tuba.jaga": "Kopeeri link",
+  "tuba.linkKopeeritud": "Toa link kopeeritud",
+  "tuba.kood": "Toa kood",
+  "tuba.sprint": "Sprint",
+  "tuba.yllata": "Juhurada",
+  "viga.BAD_NAME": "Nimi ei sobi.",
+  "viga.ROOM_FULL": "Tuba on täis.",
+  "viga.ROOM_NOT_FOUND": "Tuba ei leitud.",
+  "viga.ROOM_RACING": "Võistlus juba käib. Liitu vaatlejana.",
+  "viga.NOT_HOST": "Ainult host saab startida.",
+  "viga.NOT_ALL_READY": "Kõik sõitjad pole veel valmis.",
+  "viga.TOO_MANY_ROOMS": "Tube on liiga palju.",
+  "viga.RATE_LIMITED": "Liiga palju sõnumeid korraga.",
+  "viga.BAD_MESSAGE": "Sõnumit ei saanud lugeda.",
 } as const;
 
 export type TKey = keyof typeof et;

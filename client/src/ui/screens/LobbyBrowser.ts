@@ -13,11 +13,13 @@ export class LobbyBrowser implements Screen {
 
   private listWrap: HTMLElement;
   private statusEl: HTMLElement;
+  private noticeEl: HTMLElement;
   private nameInput: HTMLInputElement;
 
   constructor() {
     this.listWrap = h("div", {});
     this.statusEl = h("div", { style: "color:var(--text-dim)" }, t("lobby.yhendus"));
+    this.noticeEl = h("div", { class: "notice", style: "display:none" });
     this.nameInput = h("input", {
       type: "text",
       placeholder: t("lobby.tubaNimi"),
@@ -40,6 +42,7 @@ export class LobbyBrowser implements Screen {
           { class: "panel center-wrap", style: "gap:16px;min-width:520px" },
           h("h2", { style: "margin:0" }, t("lobby.pealkiri")),
           this.statusEl,
+          this.noticeEl,
           this.listWrap,
           h("div", { class: "row" }, this.nameInput, createBtn, backBtn),
         ),
@@ -68,6 +71,7 @@ export class LobbyBrowser implements Screen {
         h("th", {}, t("lobby.tubaNimi")),
         h("th", {}, t("lobby.mangijaid")),
         h("th", {}, t("lobby.rada")),
+        h("th", {}, t("lobby.soidab")),
         h("th", {}, ""),
       ),
     );
@@ -86,10 +90,16 @@ export class LobbyBrowser implements Screen {
           h("td", {}, r.name),
           h("td", {}, `${r.players}/${r.maxPlayers}`),
           h("td", {}, TRACKS[r.trackId]?.nimi ?? r.trackId),
+          h("td", {}, r.phase === "lobby" ? "–" : t("lobby.soidab")),
           h("td", {}, h("div", { class: "row" }, joinBtn, watchBtn)),
         ),
       );
     }
     this.listWrap.replaceChildren(table);
+  }
+
+  showNotice(text: string): void {
+    this.noticeEl.textContent = text;
+    this.noticeEl.style.display = "";
   }
 }

@@ -17,14 +17,14 @@ import { getTrack } from "@shared/tracks";
 import { getWaveHeight } from "@shared/waves";
 import { TICK_RATE } from "@shared/constants";
 import type { TrackId } from "@shared/types";
-import type { RoomStateMsg } from "@shared/protocol";
+import type { ErrorCode, RoomStateMsg } from "@shared/protocol";
 import { ScreenManager } from "./ui/ScreenManager";
 import { MainMenu, type GraphicsLevel, type MenuChoices } from "./ui/screens/MainMenu";
 import { ResultsScreen, type ResultRow } from "./ui/screens/Results";
 import { LobbyBrowser } from "./ui/screens/LobbyBrowser";
 import { RoomScreen } from "./ui/screens/RoomScreen";
 import { Hud } from "./ui/screens/Hud";
-import { t } from "./ui/i18n/et";
+import { t, type TKey } from "./ui/i18n/et";
 import type { MinimapDot } from "./ui/Minimap";
 import { AudioEngine } from "./audio/AudioEngine";
 import { EngineSound } from "./audio/EngineSound";
@@ -90,6 +90,7 @@ export class Game {
   private sendAccum = 0;
   private standings: string[] = [];
   private mpFinished = false;
+  private pendingJoinRoomId: string | null = null;
   /** Vaatleja-režiim: ei võistle, vaba kaamera */
   private spectating = false;
   private spectatorCam: SpectatorCamera;
@@ -294,6 +295,7 @@ export class Game {
   private connectMultiplayer(c: MenuChoices): void {
     this.mode = "mp";
     this.choices = c;
+    this.pendingJoinRoomId = this.roomIdFromHash();
     this.state = "lobby";
     this.screens.show(this.lobbyScreen);
     this.lobbyScreen.setConnectionStatus(false);
@@ -301,7 +303,8 @@ export class Game {
     if (this.net) {
       // Juba ühendatud (tagasi menüüst)
       this.lobbyScreen.setConnectionStatus(this.net.connected);
-      this.net.send({ type: "listRooms" });
+      if (this.pendingJoinRoomId) this.joinPendingRoom();
+      else this.net.send({ type: "listRooms" });
       return;
     }
 
@@ -310,6 +313,7 @@ export class Game {
     net.onConnectionChange = (ok) => {
       this.lobbyScreen.setConnectionStatus(ok);
       if (ok && net.playerId) this.roomScreen.setMyId(net.playerId);
+      if (ok && this.pendingJoinRoomId) this.joinPendingRoom();
     };
 
     net.on("roomList", (m) => this.lobbyScreen.setRooms(m.rooms));
@@ -337,7 +341,7 @@ export class Game {
       }
     });
     net.on("chat", (m) => this.roomScreen.addChat(m.name, m.text));
-    net.on("error", (m) => console.warn("Server:", m.code, m.message));
+    net.on("error", (m) => this.showNetError(m.code, m.message));
 
     net.on("countdown", (m) => this.startMpCountdown(m.startsAt, m.config, m.spawns));
     net.on("raceStarted", () => {
@@ -380,6 +384,26 @@ export class Game {
     });
 
     net.connect(c.name, c.color);
+  }
+
+  private roomIdFromHash(): string | null {
+    const match = location.hash.match(/(?:^|[#&])room=([a-z0-9-]+)/i);
+    return match?.[1]?.slice(0, 12) ?? null;
+  }
+
+  private joinPendingRoom(): void {
+    if (!this.net || !this.pendingJoinRoomId) return;
+    const roomId = this.pendingJoinRoomId;
+    this.pendingJoinRoomId = null;
+    this.net.send({ type: "joinRoom", roomId });
+  }
+
+  private showNetError(code: ErrorCode, fallback: string): void {
+    const msg = t(`viga.${code}` as TKey) || fallback;
+    if (this.state === "lobby") this.lobbyScreen.showNotice(msg);
+    else if (this.state === "room") this.roomScreen.showNotice(msg);
+    else this.hud.flashCenter(msg, 2.4);
+    console.warn("Server:", code, fallback);
   }
 
   private startMpCountdown(

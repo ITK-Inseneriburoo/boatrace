@@ -20,6 +20,8 @@ export class RoomScreen implements Screen {
   private myId: string | null = null;
   private room: RoomStateMsg | null = null;
   private titleEl: HTMLElement;
+  private roomMetaEl: HTMLElement;
+  private noticeEl: HTMLElement;
   private playersWrap: HTMLElement;
   private vehiclesWrap: HTMLElement;
   private tracksWrap: HTMLElement;
@@ -28,6 +30,9 @@ export class RoomScreen implements Screen {
   private readyBtn: HTMLButtonElement;
   private spectatorBtn: HTMLButtonElement;
   private startBtn: HTMLButtonElement;
+  private shareBtn: HTMLButtonElement;
+  private sprintBtn: HTMLButtonElement;
+  private randomBtn: HTMLButtonElement;
   private chatLog: HTMLElement;
   private chatInput: HTMLInputElement;
   private myReady = false;
@@ -35,6 +40,8 @@ export class RoomScreen implements Screen {
 
   constructor() {
     this.titleEl = h("h2", { style: "margin:0" });
+    this.roomMetaEl = h("div", { style: "color:var(--text-dim);font-size:.85rem" });
+    this.noticeEl = h("div", { class: "notice", style: "display:none" });
     this.playersWrap = h("div", {});
     this.vehiclesWrap = h("div", { class: "row" });
     this.tracksWrap = h("div", { class: "row" });
@@ -53,6 +60,20 @@ export class RoomScreen implements Screen {
     };
     this.startBtn = h("button", { class: "primary" }, t("tuba.alusta")) as HTMLButtonElement;
     this.startBtn.onclick = () => this.onStart();
+    this.shareBtn = h("button", {}, t("tuba.jaga")) as HTMLButtonElement;
+    this.shareBtn.onclick = () => void this.copyRoomLink();
+    this.sprintBtn = h("button", {}, t("tuba.sprint")) as HTMLButtonElement;
+    this.sprintBtn.onclick = () => {
+      if (!this.room) return;
+      this.onConfigure(this.room.config.trackId, this.room.config.weatherId, 1);
+    };
+    this.randomBtn = h("button", {}, t("tuba.yllata")) as HTMLButtonElement;
+    this.randomBtn.onclick = () => {
+      const pick = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
+      const trackId = pick(TRACK_IDS);
+      const weatherId = pick(TRACKS[trackId]?.allowedWeathers ?? (Object.keys(WEATHERS) as WeatherId[]));
+      this.onConfigure(trackId, weatherId, TRACKS[trackId]?.defaultLaps ?? 3);
+    };
     const leaveBtn = h("button", {}, t("tuba.lahku"));
     leaveBtn.onclick = () => this.onLeave();
 
@@ -83,13 +104,25 @@ export class RoomScreen implements Screen {
           "div",
           { class: "panel center-wrap", style: "gap:14px;min-width:640px" },
           this.titleEl,
+          this.roomMetaEl,
+          this.noticeEl,
           this.playersWrap,
           h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), this.vehiclesWrap),
           h("div", { class: "field" }, h("label", {}, t("menu.rada")), this.tracksWrap),
           h("div", { class: "field" }, h("label", {}, t("menu.ilm")), this.weatherWrap),
           h("div", { class: "field" }, h("label", {}, t("menu.ringe")), this.lapsWrap),
           h("div", { class: "field", style: "width:100%" }, this.chatLog, this.chatInput),
-          h("div", { class: "row" }, this.readyBtn, this.spectatorBtn, this.startBtn, leaveBtn),
+          h(
+            "div",
+            { class: "row" },
+            this.readyBtn,
+            this.spectatorBtn,
+            this.startBtn,
+            this.sprintBtn,
+            this.randomBtn,
+            this.shareBtn,
+            leaveBtn,
+          ),
         ),
       ),
     );
@@ -106,6 +139,11 @@ export class RoomScreen implements Screen {
     while (this.chatLog.children.length > 60) this.chatLog.firstChild?.remove();
   }
 
+  showNotice(text: string): void {
+    this.noticeEl.textContent = text;
+    this.noticeEl.style.display = "";
+  }
+
   setRoom(room: RoomStateMsg): void {
     this.room = room;
     const isHost = this.myId === room.hostId;
@@ -114,6 +152,7 @@ export class RoomScreen implements Screen {
     this.mySpectator = me?.spectator ?? false;
 
     this.titleEl.textContent = room.name;
+    this.roomMetaEl.textContent = `${t("tuba.kood")}: ${room.id}`;
 
     // Mängijad
     const list = h("div", { style: "display:flex;flex-direction:column;gap:4px;width:100%" });
@@ -206,10 +245,23 @@ export class RoomScreen implements Screen {
       : t("tuba.vaatleja");
     this.spectatorBtn.classList.toggle("primary", this.mySpectator);
     this.startBtn.style.display = isHost ? "" : "none";
+    this.sprintBtn.style.display = isHost ? "" : "none";
+    this.randomBtn.style.display = isHost ? "" : "none";
     const allReady = room.players.every(
       (p) => p.id === room.hostId || p.spectator || !p.connected || p.ready,
     );
     const racers = room.players.filter((p) => p.connected && !p.spectator).length;
     this.startBtn.disabled = !allReady || racers < 1;
+  }
+
+  private async copyRoomLink(): Promise<void> {
+    if (!this.room) return;
+    const url = `${location.origin}${location.pathname}#room=${this.room.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.showNotice(t("tuba.linkKopeeritud"));
+    } catch {
+      this.showNotice(url);
+    }
   }
 }
