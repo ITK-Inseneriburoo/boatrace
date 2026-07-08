@@ -85,7 +85,7 @@ export class MainMenu implements Screen {
         { class: "vehicle-card" },
         h("div", { class: "vname" }, v.nimi),
         h("div", { class: "vdesc" }, v.kirjeldus),
-        h("div", { class: "vstats" }, bar(v.topSpeed / 30), bar(v.accel / 10), bar(v.grip)),
+        h("div", { class: "vstats" }, bar(v.topSpeed / 35), bar(v.accel / 11), bar(v.grip)),
       );
       if (id === this.choices.vehicle) card.classList.add("selected");
       card.onclick = () => {

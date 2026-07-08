@@ -10,7 +10,7 @@ export interface BoatInput {
   slide: boolean;
 }
 
-export const GRAVITY = 16; // arkaadne gravitatsioon — hüpped on napsakamad
+export const GRAVITY = 13; // arkaadne gravitatsioon — piisavalt õhku hüpeteks
 
 /**
  * Pinnakõrguse lisafunktsioon (rambid faasis 4):
@@ -43,6 +43,9 @@ export class BoatPhysics {
 
   private heaveVel = 0;
   private wasAirborne = false;
+  /** pinna tõusukiirus (silutud) — rambilt lahkumisel saab sellest lennukiirus */
+  private climbRate = 0;
+  private lastSurfY: number | null = null;
 
   constructor(public stats: VehicleStats) {}
 
@@ -55,6 +58,8 @@ export class BoatPhysics {
     this.roll = 0;
     this.airborne = false;
     this.heaveVel = 0;
+    this.climbRate = 0;
+    this.lastSurfY = null;
   }
 
   get forwardX(): number {
@@ -91,6 +96,13 @@ export class BoatPhysics {
     const hLeft = this.surfaceAt(waves, this.pos.x - rx * halfW, this.pos.z - rz * halfW, t);
     const waterY = (hBow + hStern + hRight + hLeft) / 4;
 
+    // Pinna tõusukiirus (rambil ronides positiivne) — hüppe stardikiiruseks
+    if (this.lastSurfY !== null) {
+      const rate = (waterY - this.lastSurfY) / dt;
+      this.climbRate = damp(this.climbRate, Math.max(rate, 0), 12, dt);
+    }
+    this.lastSurfY = waterY;
+
     const speedRatio = clamp(this.speed / s.topSpeed, 0, 1);
 
     if (!this.airborne) {
@@ -111,10 +123,12 @@ export class BoatPhysics {
       this.pitch = damp(this.pitch, targetPitch, 6, dt);
       this.roll = damp(this.roll, clamp(targetRoll, -0.5, 0.5), 5, dt);
 
-      // Õhkutõus: pind kaob jala alt (laineharja seljalt või rambilt)
-      if (this.pos.y > waterY + 0.45 && this.heaveVel > 1.5) {
+      // Õhkutõus: pind kaob jala alt (laineharja seljalt või rambilt).
+      // Rambi lõpus annab tõusukalle korraliku stardikiiruse.
+      if (this.pos.y > waterY + 0.45 && (this.heaveVel > 1.5 || this.climbRate > 2)) {
         this.airborne = true;
-        this.vel.y = this.heaveVel;
+        this.vel.y = clamp(Math.max(this.heaveVel, this.climbRate * 1.05), 0, 9);
+        this.climbRate = 0;
         this.onTakeoff();
       }
     } else {
@@ -172,8 +186,8 @@ export class BoatPhysics {
     const steerAuthority = Math.sqrt(Math.max(speedRatio, 0.04)) * (this.airborne ? 0.15 : 1);
     // Tagurdades peegeldub roolitunnetus nagu autol (ahter läheb klahvi suunas)
     const reversing = fwdSpeed < -0.5 ? -1 : 1;
-    const targetYawRate = -input.steer * s.rudder * 1.5 * steerAuthority * reversing;
-    this.yawRate = damp(this.yawRate, targetYawRate, 7, dt);
+    const targetYawRate = -input.steer * s.rudder * 1.15 * steerAuthority * reversing;
+    this.yawRate = damp(this.yawRate, targetYawRate, 5.5, dt);
     this.yaw += this.yawRate * dt;
 
     // --- Hoovus ---
