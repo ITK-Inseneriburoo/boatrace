@@ -28,7 +28,11 @@ const et = {
   "hud.rekord": "UUS REKORD!",
   "hud.start": "START!",
   "hud.finis": "FINIŠ!",
-  "hud.respawn": "R — tagasi rajale · H — juhtimine",
+  "hud.respawn": "R — tagasi rajale · H — juhtimine · Esc — paus",
+  "paus.pealkiri": "Paus",
+  "paus.jatka": "Jätka",
+  "paus.katkesta": "Katkesta sõit",
+  "paus.lahku": "Lahku sõidust",
   "menu.juhtimine": "Juhtimine (klahvid)",
 
   "tulemused.pealkiri": "Tulemused",

@@ -65,6 +65,7 @@ export class Game {
   private countdownT = 0;
   private lastCountShown = -1;
   private finishTimer = 0;
+  private paused = false;
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
 
@@ -180,6 +181,9 @@ export class Game {
       this.screens.show(this.lobbyScreen);
     };
     this.roomScreen.onChat = (text) => this.net?.send({ type: "chat", text });
+
+    this.hud.onResume = () => this.setPaused(false);
+    this.hud.onQuit = () => this.quitRace();
 
     this.screens.show(this.menu);
 
@@ -508,6 +512,29 @@ export class Game {
     this.remoteDist.clear();
   }
 
+  private setPaused(on: boolean): void {
+    this.paused = on;
+    this.hud.setPaused(on, this.mode === "mp" ? t("paus.lahku") : t("paus.katkesta"));
+  }
+
+  /** Katkesta sõit pausimenüüst */
+  private quitRace(): void {
+    this.setPaused(false);
+    if (this.mode === "mp") {
+      this.net?.send({ type: "leaveRoom" });
+      this.hud.hide();
+      this.hud.setSpectator(false);
+      this.spectating = false;
+      this.gateArrow.visible = false;
+      this.clearRemoteBoats();
+      this.stopRaceAudio();
+      this.state = "lobby";
+      this.screens.show(this.lobbyScreen);
+    } else {
+      this.toMenu();
+    }
+  }
+
   private toMenu(): void {
     this.state = "menu";
     this.mode = "solo";
@@ -561,13 +588,18 @@ export class Game {
   private update(dt: number): void {
     this.sky.update(dt);
 
+    const inRace = this.state === "racing" || this.state === "countdown";
+
     // H — juhtimise legend sõidu/loenduse ajal
-    if (
-      (this.state === "racing" || this.state === "countdown") &&
-      this.input.wasPressed("KeyH")
-    ) {
+    if (inRace && this.input.wasPressed("KeyH")) {
       this.hud.toggleLegend();
     }
+
+    // Esc — pausimenüü (soolo peatab mängu; võrgus ainult overlay)
+    if (inRace && this.input.wasPressed("Escape")) {
+      this.setPaused(!this.paused);
+    }
+    if (this.paused && this.mode === "solo") return;
 
     if (this.state === "countdown") {
       let remaining: number;
@@ -601,7 +633,7 @@ export class Game {
     }
 
     if (this.state === "racing" && this.boat && this.race) {
-      if (this.input.respawnPressed) this.respawn();
+      if (this.input.respawnPressed && !this.paused) this.respawn();
       // Hoovus (jõekanjon)
       const cur = this.track.def.current ?? 0;
       if (cur > 0) {
@@ -615,12 +647,11 @@ export class Game {
         this.boat.physics.currentX = 0;
         this.boat.physics.currentZ = 0;
       }
-      this.boat.update(
-        { throttle: this.input.throttle, steer: this.input.steer, slide: this.input.slide },
-        this.weather.waves,
-        this.engine.simTime,
-        dt,
-      );
+      // Pausi ajal (võrgus) gaas maha — paat jääb triivima, sõit jätkub teistel
+      const inp = this.paused
+        ? { throttle: 0, steer: 0, slide: false }
+        : { throttle: this.input.throttle, steer: this.input.steer, slide: this.input.slide };
+      this.boat.update(inp, this.weather.waves, this.engine.simTime, dt);
       const hit = resolveCollisions(this.boat.physics, this.track.colliders, this.track.terrain);
       if (hit && !hit.soft) {
         this.chaseCam.addTrauma(Math.min(hit.impact * 0.05, 0.6));

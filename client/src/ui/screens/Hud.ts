@@ -26,6 +26,11 @@ export class Hud {
   private minimap: Minimap | null = null;
   private centerTimer = 0;
   private legendEl: HTMLElement;
+  private pauseEl: HTMLElement;
+  private quitBtn: HTMLButtonElement;
+
+  onResume: () => void = () => {};
+  onQuit: () => void = () => {};
 
   constructor() {
     this.speedNum = h("div", { class: "num" }, "0");
@@ -36,6 +41,27 @@ export class Hud {
     this.centerEl = h("div", { class: "hud-item", id: "hud-center" });
     this.hintEl = h("div", { class: "hud-item", id: "hud-hint" }, t("hud.respawn"));
     this.wrongEl.style.display = "none";
+
+    // Pausimenüü (Esc)
+    const resumeBtn = h("button", { class: "primary" }, t("paus.jatka")) as HTMLButtonElement;
+    resumeBtn.onclick = () => this.onResume();
+    this.quitBtn = h("button", {}, t("paus.katkesta")) as HTMLButtonElement;
+    this.quitBtn.onclick = () => this.onQuit();
+    this.pauseEl = h(
+      "div",
+      {
+        class: "hud-item",
+        style:
+          "inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,10,16,.55);pointer-events:auto",
+      },
+      h(
+        "div",
+        { class: "panel center-wrap", style: "gap:16px;padding:30px 44px" },
+        h("h2", { style: "margin:0" }, t("paus.pealkiri")),
+        h("div", { class: "row" }, resumeBtn, this.quitBtn),
+      ),
+    );
+
     this.legendEl = h(
       "div",
       {
@@ -48,6 +74,7 @@ export class Hud {
       "div",
       { id: "hud" },
       this.legendEl,
+      this.pauseEl,
       h(
         "div",
         { class: "hud-item", id: "hud-speed" },
@@ -80,6 +107,12 @@ export class Hud {
 
   toggleLegend(): void {
     this.legendEl.style.display = this.legendEl.style.display === "none" ? "" : "none";
+  }
+
+  /** Pausimenüü; quitLabel: soolo "Katkesta sõit" / võrgus "Lahku sõidust" */
+  setPaused(on: boolean, quitLabel?: string): void {
+    this.pauseEl.style.display = on ? "flex" : "none";
+    if (quitLabel) this.quitBtn.textContent = quitLabel;
   }
 
   /** Vaatlejavaade: peida sõitjaspetsiifiline (kiirus, ring, ajad, koht) */
