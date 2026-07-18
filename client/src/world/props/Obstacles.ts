@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { mulberry32 } from "@shared/math";
+import { loadPbrSet } from "../../core/Textures";
+import { installTriplanar } from "../materials/triplanar";
 
 export interface PlacedObstacle {
   kind: "kivi" | "palk";
@@ -54,6 +56,14 @@ export function buildObstacleMeshes(
       roughness: 0.95,
       flatShading: true,
     });
+    // PBR-kivikate triplanaarselt (geomeetrial pole UV-sid); flat-shading
+    // asendub normal-mapiga. 404 → jääb praegune lihtvärv.
+    void loadPbrSet("/textures/terrain/rock").then((set) => {
+      if (!set) return;
+      mat.flatShading = false;
+      mat.color.set(0xcfcabd);
+      installTriplanar(mat, set, 0.35);
+    });
     const mesh = new THREE.InstancedMesh(rockGeo, mat, rocks.length);
     const dummy = new THREE.Object3D();
     const col = new THREE.Color();
@@ -77,6 +87,12 @@ export function buildObstacleMeshes(
     const logGeo = new THREE.CylinderGeometry(0.32, 0.38, 6, 9);
     logGeo.rotateZ(Math.PI / 2);
     const mat = new THREE.MeshStandardMaterial({ color: 0x6b4f33, roughness: 0.9 });
+    // Ainult puidusüü reljeef (planke-albedo näeks palgil imelik välja)
+    void loadPbrSet("/textures/harbor/planks").then((set) => {
+      if (!set?.normal) return;
+      mat.normalMap = set.normal;
+      mat.needsUpdate = true;
+    });
     const mesh = new THREE.InstancedMesh(logGeo, mat, logs.length);
     const dummy = new THREE.Object3D();
     logs.forEach((o, i) => {

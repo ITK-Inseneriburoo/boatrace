@@ -1,7 +1,31 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import type { WeatherPreset } from "./WeatherPresets";
 import type { Engine } from "../core/Engine";
+import { getTextureRes } from "../core/Textures";
+
+const rgbeLoader = new RGBELoader();
+const hdriCache = new Map<string, Promise<THREE.DataTexture | null>>();
+
+/** Lae HDRI eelistatud resolutsioonis, 2k puudumisel 1k; viga → null */
+function loadHdri(base: string): Promise<THREE.DataTexture | null> {
+  const res = getTextureRes();
+  const key = `${base}@${res}`;
+  let p = hdriCache.get(key);
+  if (!p) {
+    p = rgbeLoader
+      .loadAsync(`${base}_${res}.hdr`)
+      .catch(() => (res === "2k" ? rgbeLoader.loadAsync(`${base}_1k.hdr`) : Promise.reject()))
+      .then((tex) => {
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        return tex;
+      })
+      .catch(() => null);
+    hdriCache.set(key, p);
+  }
+  return p;
+}
 
 /**
  * Taevas + päike + valgustus + udu ühe ilmapreseti kaupa.
@@ -54,8 +78,15 @@ export class SkySystem {
     this.pmrem = new THREE.PMREMGenerator(engine.renderer);
   }
 
+  /** Kaitseb hilinenud HDRI-laadimise eest pärast preseti vahetust */
+  private presetToken = 0;
+
   applyPreset(p: WeatherPreset): void {
     this.preset = p;
+    const token = ++this.presetToken;
+    // Alati kõigepealt protseduuriline taevas (HDRI on async täiendus)
+    this.sky.visible = true;
+    this.engine.scene.background = null;
     const u = this.sky.material.uniforms;
     u.turbidity.value = p.turbidity;
     u.rayleigh.value = p.rayleigh;
@@ -79,6 +110,33 @@ export class SkySystem {
 
     this.captureSky();
     this.lightningTimer = 4 + Math.random() * 8;
+
+    if (p.hdri) {
+      void loadHdri(p.hdri).then((tex) => {
+        if (!tex || token !== this.presetToken) return;
+        this.applyHdri(p, tex);
+      });
+    }
+  }
+
+  /** Vaheta protseduuriline taevas laetud HDRI vastu (taust + IBL + ookeanikuubik) */
+  private applyHdri(p: WeatherPreset, tex: THREE.DataTexture): void {
+    const { scene } = this.engine;
+    this.sky.visible = false;
+    scene.background = tex;
+    // IBL annab ambient'i — hemi jääb vaid sosinaks varjukülgede jaoks
+    this.hemiLight.intensity = p.hdriHemiIntensity ?? 0.15;
+
+    this.envRT?.dispose();
+    this.envRT = this.pmrem.fromEquirectangular(tex);
+    scene.environment = this.envRT.texture;
+
+    // Ookeani kuubik: sama cube-capture, ainult taustaks on equirect-HDRI.
+    // NB: PMREM-tekstuuri EI tohi ookeani uEnvMap'i anda (pole tavaline cubemap).
+    this.captureScene.background = tex;
+    this.cubeCamera.update(this.engine.renderer, this.captureScene);
+    this.captureScene.background = null;
+    this.envCube = this.cubeTarget.texture;
   }
 
   /** Renderda taevas cube- ja PMREM-tekstuuriks (ainult preseti vahetusel) */
@@ -95,9 +153,22 @@ export class SkySystem {
     scene.add(this.sky); // tagasi põhistseeni
   }
 
+  /** Rakenda varjude ast: castShadow + map'i resolutsioon (vana map visatakse ära) */
+  applyShadowTier(enabled: boolean, res: number): void {
+    this.shadowRes = res;
+    this.sunLight.castShadow = enabled;
+    this.sunLight.shadow.mapSize.set(res, res);
+    this.sunLight.shadow.map?.dispose();
+    this.sunLight.shadow.map = null;
+  }
+
+  private shadowRes = 2048;
+
   /** Varjukaamera järgib mängijat (texel-snap, et varjud ei väreleks) */
   followTarget(pos: THREE.Vector3): void {
-    const texelSize = 140 / 2048;
+    // Texel-suurus PEAB vastama tegelikule map'i resolutsioonile,
+    // muidu snap toimub vales sammus ja varjud värelevad (nt 4096 map'iga)
+    const texelSize = 140 / this.shadowRes;
     const x = Math.round(pos.x / texelSize) * texelSize;
     const z = Math.round(pos.z / texelSize) * texelSize;
     this.sunLight.position.set(x, 0, z).addScaledVector(this.sunDir, 300);

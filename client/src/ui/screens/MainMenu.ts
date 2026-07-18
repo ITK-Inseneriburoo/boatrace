@@ -6,8 +6,9 @@ import { VEHICLES, VEHICLE_IDS } from "@shared/vehicles";
 import { TRACKS, TRACK_IDS } from "@shared/tracks";
 import type { TrackId, VehicleId, WeatherId } from "@shared/types";
 import { WEATHERS } from "../../world/WeatherPresets";
+import type { GraphicsLevel } from "../../core/Quality";
 
-export type GraphicsLevel = "korge" | "keskmine" | "madal";
+export type { GraphicsLevel };
 
 export interface MenuChoices {
   name: string;
@@ -154,7 +155,7 @@ export class MainMenu implements Screen {
     // Graafikatase
     const gfx = h("div", { class: "row" });
     const gEls: HTMLElement[] = [];
-    for (const level of ["korge", "keskmine", "madal"] as GraphicsLevel[]) {
+    for (const level of ["ultra", "korge", "keskmine", "madal"] as GraphicsLevel[]) {
       const chip = h("div", { class: "chip" }, t(`menu.grafika.${level}` as never));
       chip.dataset.graphics = level;
       if (level === this.choices.graphics) chip.classList.add("selected");

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { PostPipeline } from "../fx/PostPipeline";
 
 export const SIM_HZ = 60;
 export const SIM_DT = 1 / SIM_HZ;
@@ -12,6 +13,7 @@ export class Engine {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
+  readonly pipeline: PostPipeline;
 
   /** Simulatsiooniaeg sekundites (kasvab fikseeritud sammudega) */
   simTime = 0;
@@ -48,6 +50,8 @@ export class Engine {
     );
     this.camera.position.set(0, 5, 12);
 
+    this.pipeline = new PostPipeline(this.renderer, this.scene, this.camera);
+
     window.addEventListener("resize", this.onResize);
   }
 
@@ -82,17 +86,19 @@ export class Engine {
     }
 
     this.onRender(this.accumulator / SIM_DT, frameDt);
-    this.renderer.render(this.scene, this.camera);
+    this.pipeline.render(frameDt);
   };
 
   private onResize = (): void => {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.pipeline.syncSize();
   };
 
   setPixelRatioCap(cap: number): void {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, cap));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.pipeline.syncSize();
   }
 }

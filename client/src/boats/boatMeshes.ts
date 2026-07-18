@@ -63,7 +63,22 @@ function loft(sections: Section[]): THREE.BufferGeometry {
   geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   geo = mergeVerts(geo);
   geo.computeVertexNormals();
+  addProjectedUVs(geo);
   return geo;
+}
+
+/**
+ * Lihtne projektsioon-UV (flake-clearcoat'i normalmap vajab UV-sid;
+ * kõrgsagedusliku müra puhul on projektsiooni moonutus nähtamatu)
+ */
+function addProjectedUVs(geo: THREE.BufferGeometry): void {
+  const pos = geo.getAttribute("position");
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = pos.getX(i) * 0.8 + pos.getY(i) * 0.3;
+    uv[i * 2 + 1] = pos.getZ(i) * 0.8;
+  }
+  geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
 }
 
 /** Liida lähestikused tipud, et normaalid tuleksid siledad */

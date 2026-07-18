@@ -10,6 +10,7 @@ const et = {
   "menu.ilm": "Ilm",
   "menu.ringe": "Ringe",
   "menu.grafika": "Graafika",
+  "menu.grafika.ultra": "Ultra",
   "menu.grafika.korge": "Kõrge",
   "menu.grafika.keskmine": "Keskmine",
   "menu.grafika.madal": "Madal",
@@ -19,6 +20,7 @@ const et = {
   "menu.sprint": "1 ringi sprint",
   "menu.yllata": "Üllata mind",
 
+  "hud.grafikaLangetatud": "Graafika langetatud (madal FPS)",
   "hud.ring": "Ring",
   "hud.varav": "Värav",
   "hud.koht": "koht",

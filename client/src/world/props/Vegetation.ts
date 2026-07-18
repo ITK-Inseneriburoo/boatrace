@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { TrackDef } from "@shared/tracks";
 import { mulberry32 } from "@shared/math";
 import type { Terrain } from "../Terrain";
+import { fitToSize, loadModel } from "../../core/Assets";
 
 /**
  * Männid saartel: tüved + võrad kahe InstancedMesh'ina.
@@ -55,6 +56,46 @@ export function buildVegetation(track: TrackDef, terrain: Terrain): THREE.Group 
   trunks.castShadow = true;
   crowns.castShadow = true;
   g.add(trunks, crowns);
+
+  // Progressiivne täiustus: GLB-mänd (nt Quaternius) asendab koonusepuud.
+  // Sama paigutusmassiiv, üks InstancedMesh GLB-materjali kohta; 404 → koonused jäävad.
+  void loadModel("props/pine").then((m) => {
+    if (!m) return;
+    fitToSize(m, 6, "y");
+    m.updateMatrixWorld(true);
+    const parts: { geo: THREE.BufferGeometry; mat: THREE.Material }[] = [];
+    m.traverse((o) => {
+      if (o instanceof THREE.Mesh) {
+        const geo = (o.geometry as THREE.BufferGeometry).clone().applyMatrix4(o.matrixWorld);
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const mat of mats) {
+          // Alpha-kaartidega võrad vajavad alphaTest'i, muidu sortimisprobleemid
+          if (mat instanceof THREE.MeshStandardMaterial && mat.transparent) {
+            mat.transparent = false;
+            mat.alphaTest = 0.5;
+          }
+          parts.push({ geo, mat });
+        }
+      }
+    });
+    if (!parts.length) return;
+
+    const instanced = parts.map((p) => {
+      const im = new THREE.InstancedMesh(p.geo, p.mat, placements.length);
+      im.castShadow = true;
+      return im;
+    });
+    const d = new THREE.Object3D();
+    placements.forEach((p, i) => {
+      d.position.set(p.x, terrain.getHeight(p.x, p.z) - 0.15, p.z);
+      d.rotation.set(0, p.rot, 0);
+      d.scale.setScalar(p.s);
+      d.updateMatrix();
+      for (const im of instanced) im.setMatrixAt(i, d.matrix);
+    });
+    g.clear();
+    g.add(...instanced);
+  });
   return g;
 }
 

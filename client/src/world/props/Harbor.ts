@@ -19,6 +19,30 @@ const redPaint = new THREE.MeshStandardMaterial({ color: 0xc23b2e, roughness: 0.
 const steel = new THREE.MeshStandardMaterial({ color: 0x4c5359, roughness: 0.5, metalness: 0.6 });
 const rust = new THREE.MeshStandardMaterial({ color: 0x8c4a32, roughness: 0.8, metalness: 0.3 });
 
+// PBR-tekstuurid saabuvad asünkroonselt ja riietavad jagatud materjalid ümber —
+// kõik sama materjali meshid uuenevad korraga; 404 → jääb ülaltoodud lihtvärv.
+// Värv jääb tindiks (map × color), seepärast heledamaks pärast map'i lisamist.
+void (async () => {
+  const { loadPbrSet, applyPbr } = await import("../../core/Textures");
+  const dress = async (
+    mat: THREE.MeshStandardMaterial,
+    base: string,
+    repeat: number,
+    tint: number,
+  ): Promise<void> => {
+    const set = await loadPbrSet(base);
+    if (!set) return;
+    applyPbr(mat, set, repeat);
+    mat.color.set(tint);
+  };
+  void dress(wood, "/textures/harbor/planks", 2, 0xffffff);
+  void dress(woodDark, "/textures/harbor/planks", 2, 0x8a8078);
+  void dress(concrete, "/textures/harbor/concrete", 2, 0xffffff);
+  void dress(stone, "/textures/terrain/rock", 1, 0xdddddd);
+  void dress(steel, "/textures/harbor/metal", 1, 0x9aa2a8);
+  void dress(rust, "/textures/harbor/rust", 1, 0xffffff);
+})();
+
 /** Puitkai vaiadel — pikkus piki lokaalset +Z */
 function buildKai(scale: number, colliders: ColliderSet, world: THREE.Matrix4): THREE.Group {
   const g = new THREE.Group();

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { WaveSet } from "@shared/waves";
 import type { WeatherPreset } from "./WeatherPresets";
+import { loadTexture } from "../core/Textures";
 import vertSrc from "./ocean.vert.glsl?raw";
 import fragSrc from "./ocean.frag.glsl?raw";
 
@@ -56,11 +57,18 @@ function makeNoiseTexture(size = 256): THREE.DataTexture {
   return tex;
 }
 
+export interface OceanTierCfg {
+  foamTex: boolean;
+  shoreAlpha: boolean;
+}
+
 export class Ocean {
   readonly group = new THREE.Group();
   readonly material: THREE.ShaderMaterial;
   private nearMesh: THREE.Mesh;
   private cellSize = NEAR_SIZE / NEAR_SEGS;
+  private foamTex: THREE.Texture | null = null;
+  private tierCfg: OceanTierCfg = { foamTex: true, shoreAlpha: true };
 
   constructor() {
     this.material = new THREE.ShaderMaterial({
@@ -80,9 +88,12 @@ export class Ocean {
           uNoiseTex: { value: makeNoiseTexture() },
           uSunDir: { value: new THREE.Vector3(0, 1, 0) },
           uSunColor: { value: new THREE.Color(0xffffff) },
+          uSunBoost: { value: 6.0 },
           uWaterDeep: { value: new THREE.Color(0x0e3d54) },
           uWaterShallow: { value: new THREE.Color(0x35b6ac) },
           uFoamLevel: { value: 0.7 },
+          uAbsorb: { value: 0.5 },
+          uFoamTex: { value: null },
           uDepthTex: { value: null },
           uHasDepthTex: { value: 0 },
           uDepthRect: { value: new THREE.Vector4(0, 0, 1, 1) },
@@ -91,6 +102,9 @@ export class Ocean {
           uWakeTex: { value: null },
           uHasWakeTex: { value: 0 },
           uWakeRect: { value: new THREE.Vector4(0, 0, 1, 1) },
+          uPlanarTex: { value: null },
+          uPlanarMatrix: { value: new THREE.Matrix4() },
+          uPlanarDistort: { value: 0.04 },
         },
       ]),
     });
@@ -99,7 +113,17 @@ export class Ocean {
     nearGeo.rotateX(-Math.PI / 2);
     this.nearMesh = new THREE.Mesh(nearGeo, this.material);
     this.nearMesh.frustumCulled = false;
+    // Läbipaistvana (SHORE_ALPHA) peab vesi renderduma enne partikleid
+    this.nearMesh.renderOrder = -1;
     this.group.add(this.nearMesh);
+
+    // Vahutekstuur (valikuline — 404 korral jääb ühtlane vahuvärv)
+    void loadTexture("/textures/water/foam_1k_color.webp", true).then((tex) => {
+      if (!tex) return;
+      this.foamTex = tex;
+      this.material.uniforms.uFoamTex.value = tex;
+      this.applyTier(this.tierCfg);
+    });
 
     // Horisondirõngas — amplituud kustub kaugusega nagunii nulli.
     // Veidi allpool, et mitte z-fightida lähivõrgu nurkadega.
@@ -111,6 +135,36 @@ export class Ocean {
     this.nearMesh.add(farMesh);
   }
 
+  /** Graafikaastme lisad: vahutekstuur ja kalda-läbipaistvus (defines) */
+  applyTier(cfg: OceanTierCfg): void {
+    this.tierCfg = cfg;
+    this.rebuildDefines();
+  }
+
+  /**
+   * Planar-peegelduse tekstuur (null = tagasi ainult kuubikule).
+   * Maatriksit uuendatakse viitena — PlanarReflection kirjutab sama objekti.
+   */
+  setPlanar(tex: THREE.Texture | null, matrix?: THREE.Matrix4): void {
+    this.material.uniforms.uPlanarTex.value = tex;
+    if (matrix) this.material.uniforms.uPlanarMatrix.value = matrix;
+    this.planarOn = !!tex;
+    this.rebuildDefines();
+  }
+
+  private planarOn = false;
+
+  private rebuildDefines(): void {
+    const cfg = this.tierCfg;
+    const defines: Record<string, string> = {};
+    if (cfg.foamTex && this.foamTex) defines.USE_FOAM_TEX = "";
+    if (cfg.shoreAlpha) defines.SHORE_ALPHA = "";
+    if (this.planarOn) defines.USE_PLANAR = "";
+    this.material.defines = defines;
+    this.material.transparent = cfg.shoreAlpha;
+    this.material.needsUpdate = true;
+  }
+
   applyWeather(p: WeatherPreset): void {
     this.setWaves(p.waves);
     const u = this.material.uniforms;
@@ -118,6 +172,7 @@ export class Ocean {
     (u.uWaterShallow.value as THREE.Color).set(p.waterShallow);
     u.uFoamLevel.value = p.foamLevel;
     (u.uSunColor.value as THREE.Color).set(p.sunColor);
+    u.uSunBoost.value = p.sunBoost ?? 6.0;
   }
 
   setWaves(waves: WaveSet): void {

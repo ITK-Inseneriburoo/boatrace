@@ -1,8 +1,23 @@
 import * as THREE from "three";
 import type { TrackDef } from "@shared/tracks";
 import { clamp, fbm2, smoothstep } from "@shared/math";
+import { loadPbrSet } from "../core/Textures";
+import { currentTier } from "../core/Quality";
+import { installSplat, type SplatOptions } from "./materials/terrainSplat";
 
 const GRID = 256;
+
+/** Vaikepalett — paleti tint splatis = raja palett / vaikeväärtus */
+const DEF_SAND = 0xcbb389, DEF_GRASS = 0x4a7440, DEF_ROCK = 0x7d7a72;
+
+function tintOf(color: number, def: number): THREE.Color {
+  const c = new THREE.Color(color), d = new THREE.Color(def);
+  return new THREE.Color(
+    clamp(c.r / Math.max(d.r, 1e-3), 0, 2),
+    clamp(c.g / Math.max(d.g, 1e-3), 0, 2),
+    clamp(c.b / Math.max(d.b, 1e-3), 0, 2),
+  );
+}
 
 /**
  * Deterministlik maastik: saarte radiaalkühmud + fBm müra,
@@ -115,6 +130,11 @@ export class Terrain {
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.receiveShadow = true;
 
+    // PBR-splat saabub asünkroonselt: vertex-värvid kirjutatakse üle
+    // heleduse-variatsiooni tindiks ja shader arvutab kihid ise.
+    // 404 → jääb praegune vertex-värvi välimus.
+    void this.installSplatAsync(geo, mat, track);
+
     // --- 4. Sügavustekstuur ookeanile (r = normaliseeritud kõrgus) ---
     const texData = new Float32Array(GRID * GRID);
     for (let i = 0; i < GRID * GRID; i++) {
@@ -130,6 +150,57 @@ export class Terrain {
     this.depthTexture.minFilter = THREE.LinearFilter;
     this.depthTexture.magFilter = THREE.LinearFilter;
     this.depthTexture.needsUpdate = true;
+  }
+
+  private splatOpts: SplatOptions | null = null;
+  private splatMat: THREE.MeshStandardMaterial | null = null;
+
+  private async installSplatAsync(
+    geo: THREE.BufferGeometry,
+    mat: THREE.MeshStandardMaterial,
+    track: TrackDef,
+  ): Promise<void> {
+    const [sand, grass, rock] = await Promise.all([
+      loadPbrSet("/textures/terrain/sand"),
+      loadPbrSet("/textures/terrain/grass"),
+      loadPbrSet("/textures/terrain/rock"),
+    ]);
+    if (!sand || !grass || !rock) return;
+
+    // Vertex-värvid → ainult heleduse variatsioon (shader teeb kihivärvid)
+    const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+    const col = geo.getAttribute("color") as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const v = fbm2(pos.getX(i) * 0.05, pos.getZ(i) * 0.05, 2, track.seed + 7) * 0.16;
+      const tint = 1 + (v - 0.08);
+      col.setXYZ(i, tint, tint, tint);
+    }
+    col.needsUpdate = true;
+
+    const pal = track.palette;
+    this.splatOpts = {
+      sand,
+      grass,
+      rock,
+      sandTint: tintOf(pal?.sand ?? DEF_SAND, DEF_SAND),
+      grassTint: tintOf(pal?.grass ?? DEF_GRASS, DEF_GRASS),
+      rockTint: tintOf(pal?.rock ?? DEF_ROCK, DEF_ROCK),
+      snowColor: new THREE.Color(0xeef2f5),
+      snowAbove: pal?.snowAbove ?? Infinity,
+      underwaterColor: new THREE.Color(0x2b3c38),
+      texScale: 1 / 6,
+      detailNormals: currentTier.terrainNormals,
+    };
+    this.splatMat = mat;
+    installSplat(mat, this.splatOpts);
+  }
+
+  /** Astmevahetus: normal-mapid sisse/välja (shader kompileerub ümber) */
+  setDetailNormals(enabled: boolean): void {
+    if (!this.splatOpts || !this.splatMat) return;
+    if (this.splatOpts.detailNormals === enabled) return;
+    this.splatOpts.detailNormals = enabled;
+    installSplat(this.splatMat, this.splatOpts);
   }
 
   /** Bilineaarne kõrgusproov maailmakoordinaatides */

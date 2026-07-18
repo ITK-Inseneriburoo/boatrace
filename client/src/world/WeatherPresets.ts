@@ -19,6 +19,19 @@ export interface WeatherPreset {
   hemiGroundColor: number;
   hemiIntensity: number;
   exposure: number;
+  /**
+   * Valikuline HDRI-taevas (failitee ilma `_1k.hdr` sufiksita; resolutsioon
+   * valitakse graafikaastme järgi). Kui puudub või ei laadu → protseduuriline
+   * Sky. Udused/tormised presetid EI tohi HDRI-t kasutada: fog ei mõjuta
+   * scene.background'i ja staatiline horisont läheks udumüüriga vastuollu.
+   */
+  hdri?: string;
+  /** materjalide envMapIntensity selle ilmaga (IBL-peegelduste tugevus) */
+  envMapIntensity: number;
+  /** hemi valguse intensiivsus kui HDRI on laetud (IBL annab põhi-ambient'i) */
+  hdriHemiIntensity?: number;
+  /** Ookeani HDR specular/glitteri kordaja (madalam kui HDRI-l on päris päikeseketas) */
+  sunBoost?: number;
   waves: WaveSet;
   waterDeep: number;
   waterShallow: number;
@@ -32,8 +45,14 @@ export const WEATHERS: Record<WeatherId, WeatherPreset> = {
   paike: {
     id: "paike",
     nimi: "Päikseline",
-    sunElevation: 42,
-    sunAzimuth: 145,
+    // Päikese suund mõõdetud HDRI heledaimast tekslist (scripts pole vaja:
+    // kloofendal "48d" = 48° elevatsioon) — vari ja glitter joonduvad taevaga
+    sunElevation: 48,
+    sunAzimuth: 55.7,
+    hdri: "/env/kloofendal_48d_partly_cloudy_puresky",
+    envMapIntensity: 1.0,
+    hdriHemiIntensity: 0.15,
+    sunBoost: 4,
     turbidity: 2.5,
     rayleigh: 1.1,
     mieCoefficient: 0.004,
@@ -58,6 +77,8 @@ export const WEATHERS: Record<WeatherId, WeatherPreset> = {
     nimi: "Torm",
     sunElevation: 22,
     sunAzimuth: 160,
+    envMapIntensity: 0.3,
+    sunBoost: 5,
     turbidity: 24,
     rayleigh: 4.5,
     mieCoefficient: 0.003,
@@ -82,6 +103,8 @@ export const WEATHERS: Record<WeatherId, WeatherPreset> = {
     nimi: "Udune õhtu",
     sunElevation: 4,
     sunAzimuth: 250,
+    envMapIntensity: 0.6,
+    sunBoost: 7,
     turbidity: 8,
     rayleigh: 2.6,
     mieCoefficient: 0.012,

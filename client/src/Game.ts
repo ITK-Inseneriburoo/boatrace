@@ -34,6 +34,10 @@ import { WakeSystem } from "./world/WakeSystem";
 import { Rain } from "./world/Rain";
 import { VEHICLES } from "@shared/vehicles";
 import { clamp } from "@shared/math";
+import { QUALITY_TIERS, lowerLevel, setCurrentTier } from "./core/Quality";
+import { setTextureQuality } from "./core/Textures";
+import { setCurrentEnvIntensity, applyEnvIntensityTo } from "./world/env";
+import { PlanarReflection } from "./world/PlanarReflection";
 
 type GameState = "menu" | "lobby" | "room" | "countdown" | "racing" | "results";
 
@@ -91,6 +95,12 @@ export class Game {
     opacity: 0.82,
   });
   private soloHadRecord = false;
+
+  // --- Kvaliteediastmed ---
+  private userGraphics: GraphicsLevel = "korge";
+  private effectiveGraphics: GraphicsLevel = "korge";
+  private lowFpsTime = 0;
+  private planar: PlanarReflection | null = null;
 
   // --- Efektid ---
   private effects = new Effects();
@@ -245,20 +255,60 @@ export class Game {
     if (this.sky.envCube) this.ocean.setEnvironment(this.sky.envCube, this.sky.sunDir);
     this.audio.setAmbient(w.id);
     this.rain.setEnabled(w.rainCount > 0);
+    // IBL-peegelduste tugevus ilma järgi; hiljem spawnitavad paadid
+    // võtavad sama väärtuse buildBoatModel'is
+    setCurrentEnvIntensity(w.envMapIntensity);
+    applyEnvIntensityTo(this.engine.scene);
   }
 
-  private applyGraphics(level: GraphicsLevel): void {
-    const cfg = {
-      korge: { pixelRatio: 1.5, shadows: true, shadowRes: 2048 },
-      keskmine: { pixelRatio: 1.15, shadows: true, shadowRes: 1024 },
-      madal: { pixelRatio: 1.0, shadows: false, shadowRes: 512 },
-    }[level];
-    this.engine.setPixelRatioCap(cfg.pixelRatio);
-    this.sky.sunLight.castShadow = cfg.shadows;
-    if (cfg.shadows) {
-      this.sky.sunLight.shadow.mapSize.set(cfg.shadowRes, cfg.shadowRes);
-      this.sky.sunLight.shadow.map?.dispose();
-      this.sky.sunLight.shadow.map = null;
+  private applyGraphics(level: GraphicsLevel, userChoice = true): void {
+    if (userChoice) this.userGraphics = level;
+    this.effectiveGraphics = level;
+    this.lowFpsTime = 0;
+    const tier = QUALITY_TIERS[level];
+    setCurrentTier(tier);
+    this.engine.setPixelRatioCap(tier.pixelRatio);
+    this.engine.pipeline.configure(tier.pipeline);
+    this.sky.applyShadowTier(tier.shadows, tier.shadowRes);
+    setTextureQuality(
+      tier.texRes,
+      tier.anisotropy,
+      this.engine.renderer.capabilities.getMaxAnisotropy(),
+    );
+    this.track?.terrain.setDetailNormals(tier.terrainNormals);
+    this.ocean.applyTier({ foamTex: tier.ocean.foamTex, shoreAlpha: tier.ocean.shoreAlpha });
+
+    // Planar-peegeldus (korge/ultra)
+    const res = tier.ocean.planarRes;
+    if (res > 0) {
+      if (!this.planar) this.planar = new PlanarReflection(res);
+      else this.planar.setSize(res);
+      this.ocean.setPlanar(this.planar.target.texture, this.planar.textureMatrix);
+    } else if (this.planar) {
+      this.planar.dispose();
+      this.planar = null;
+      this.ocean.setPlanar(null);
+    }
+  }
+
+  /**
+   * Automaatne kvaliteedilangetus: kui FPS on pikalt madal, astu aste alla.
+   * Kunagi üles tagasi ega kasutaja salvestatud valikut üle ei kirjuta.
+   */
+  private autoDowngrade(frameDt: number): void {
+    if (this.engine.avgFps < 45) {
+      this.lowFpsTime += frameDt;
+      if (this.lowFpsTime > 5) {
+        const lower = lowerLevel(this.effectiveGraphics);
+        if (lower) {
+          this.applyGraphics(lower, false);
+          this.hud.flashCenter(t("hud.grafikaLangetatud"), 2.5);
+        } else {
+          this.lowFpsTime = 0;
+        }
+      }
+    } else {
+      this.lowFpsTime = 0;
     }
   }
 
@@ -821,6 +871,8 @@ export class Game {
   private render(alpha: number, frameDt: number): void {
     const time = this.engine.simTime;
 
+    this.autoDowngrade(frameDt);
+
     if (this.state === "menu" || this.state === "lobby" || this.state === "room") {
       const a = time * 0.04;
       this.engine.camera.position.set(Math.sin(a) * 300, 55, Math.cos(a) * 300);
@@ -949,6 +1001,14 @@ export class Game {
     this.rain.update(time, this.engine.camera.position);
 
     this.ocean.update(time, this.engine.camera.position);
+
+    // Peegelpilt — PEAB renderduma enne composer'it (onRender jookseb enne),
+    // partiklid/vihm/ookean ise peeglist väljas
+    this.planar?.render(this.engine.renderer, this.engine.scene, this.engine.camera, [
+      this.ocean.group,
+      this.effects.group,
+      this.rain.points,
+    ]);
 
     if (this.state === "racing" || this.state === "countdown") {
       this.updateHud(frameDt);

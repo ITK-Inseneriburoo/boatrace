@@ -2,15 +2,21 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 /**
- * Valikuliste glTF-mudelite laadija (Kenney watercraft kit, CC0).
- * Kõik kasutuskohad ehitavad KÕIGEPEALT protseduurilise variandi ja
- * asendavad selle mudeli saabumisel — 404/viga = jääb protseduuriline.
+ * Valikuliste glTF-mudelite laadija (Kenney kit, Sketchfab CC-BY sõidukid jm —
+ * vt public/ATTRIBUTION.md). Kõik kasutuskohad ehitavad KÕIGEPEALT
+ * protseduurilise variandi ja asendavad selle mudeli saabumisel —
+ * 404/viga = jääb protseduuriline.
  */
 const loader = new GLTFLoader();
 const cache = new Map<string, Promise<THREE.Group | null>>();
 
-export function loadModel(name: string): Promise<THREE.Group | null> {
-  let p = cache.get(name);
+/**
+ * matte=true (vaikimisi, Kenney low-poly): roughness surutakse matiks.
+ * matte=false (realistlikud PBR-mudelid): materjalid jäävad puutumata.
+ */
+export function loadModel(name: string, matte = true): Promise<THREE.Group | null> {
+  const key = `${name}|${matte}`;
+  let p = cache.get(key);
   if (!p) {
     p = loader
       .loadAsync(`/models/${name}.glb`)
@@ -19,17 +25,23 @@ export function loadModel(name: string): Promise<THREE.Group | null> {
         g.traverse((o) => {
           if (o instanceof THREE.Mesh) {
             o.castShadow = true;
-            // Kenney tekstuurid on teravad low-poly värvid — hoia matina
-            const mats = Array.isArray(o.material) ? o.material : [o.material];
-            for (const m of mats) {
-              if (m instanceof THREE.MeshStandardMaterial) m.roughness = 0.85;
+            if (matte) {
+              // Kenney tekstuurid on teravad low-poly värvid — hoia matina
+              const mats = Array.isArray(o.material) ? o.material : [o.material];
+              for (const m of mats) {
+                if (m instanceof THREE.MeshStandardMaterial) m.roughness = 0.85;
+              }
             }
           }
         });
         return g;
       })
-      .catch(() => null);
-    cache.set(name, p);
+      .catch((err) => {
+        // 404 on ootuspärane (progressiivne täiustus); parse-viga tasub näha
+        console.warn(`loadModel: ${name} jäi protseduuriliseks:`, err?.message ?? err);
+        return null;
+      });
+    cache.set(key, p);
   }
   // Iga kasutaja saab oma klooni
   return p.then((g) => (g ? (g.clone(true) as THREE.Group) : null));
