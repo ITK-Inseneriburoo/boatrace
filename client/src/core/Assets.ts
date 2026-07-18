@@ -55,8 +55,21 @@ export function loadModel(name: string, matte = true): Promise<THREE.Group | nul
       });
     cache.set(key, p);
   }
-  // Iga kasutaja saab oma klooni
-  return p.then((g) => (g ? (g.clone(true) as THREE.Group) : null));
+  // Iga kasutaja saab oma klooni. NB: clone(true) jagab materjale —
+  // kloonime ka need, muidu ühe paadi läbipaistvaks tegemine (kummitus,
+  // pealtvaataja) muudab KÕIK sama GLB-ga paadid läbipaistvaks.
+  return p.then((g) => {
+    if (!g) return null;
+    const c = g.clone(true) as THREE.Group;
+    c.traverse((o) => {
+      if (o instanceof THREE.Mesh) {
+        o.material = Array.isArray(o.material)
+          ? o.material.map((m) => m.clone())
+          : o.material.clone();
+      }
+    });
+    return c;
+  });
 }
 
 /**

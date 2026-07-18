@@ -36,6 +36,18 @@ export class RemoteBoat {
     color: number,
   ) {
     this.mesh = buildBoatModel(vehicle, color);
+    this.collectMaterials();
+    // GLB-vahetus toob uued materjalid — kogu uuesti ja taasta läbipaistvus
+    this.mesh.userData.onModelSwapped = () => {
+      this.collectMaterials();
+      const g = this.ghost;
+      this.ghost = !g; // sunni setGhost uuesti rakendama
+      this.setGhost(g);
+    };
+  }
+
+  private collectMaterials(): void {
+    this.materials = [];
     this.mesh.traverse((o) => {
       if (o instanceof THREE.Mesh) {
         const mats = Array.isArray(o.material) ? o.material : [o.material];

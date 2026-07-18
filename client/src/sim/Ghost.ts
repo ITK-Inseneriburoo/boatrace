@@ -115,8 +115,9 @@ export class GhostBoat {
     this.samples = data.samples;
     this.lapMs = data.lapMs;
     this.mesh = buildBoatModel(data.vehicle, 0xbfd4de);
-    // NB: GLB asendus toimub asünkroonselt — muuda läbipaistvaks viitega
-    setTimeout(() => this.makeTranslucent(), 1500);
+    // GLB asendus toimub asünkroonselt — factory kutsub hooki, kui uued
+    // materjalid on kohal (materjalid on kloonipõhised, teisi paate ei mõjuta)
+    this.mesh.userData.onModelSwapped = () => this.makeTranslucent();
     this.makeTranslucent();
   }
 
