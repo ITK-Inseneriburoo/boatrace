@@ -38,6 +38,7 @@ import { QUALITY_TIERS, lowerLevel, setCurrentTier } from "./core/Quality";
 import { setTextureQuality } from "./core/Textures";
 import { setCurrentEnvIntensity, applyEnvIntensityTo } from "./world/env";
 import { PlanarReflection } from "./world/PlanarReflection";
+import { preloadVehicleModels } from "./boats/BoatFactory";
 
 type GameState = "menu" | "lobby" | "room" | "countdown" | "racing" | "results";
 
@@ -135,6 +136,8 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.engine = new Engine(canvas);
+    // Sõidukimudelid sooja: menüü ajal parsitakse GLB-d ja tekstuurid GPU-le
+    preloadVehicleModels(this.engine.renderer);
     this.sky = new SkySystem(this.engine);
     this.engine.scene.add(this.ocean.group);
     this.chaseCam = new ChaseCamera(this.engine.camera);

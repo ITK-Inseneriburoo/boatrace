@@ -20,8 +20,32 @@ const VEHICLE_MODELS: Partial<Record<VehicleId, { file: string; rotY: number; dr
   kaater: { file: "boat-riva", rotY: Math.PI / 2, draft: 0.24 },
   kalapaat: { file: "boat-fishing", rotY: 0, draft: 0.28 },
   jett: { file: "jetski-regular", rotY: -Math.PI / 2, draft: 0.12 },
-  sportjett: { file: "jetski-sport", rotY: Math.PI / 2, draft: 0.1 },
+  sportjett: { file: "jetski-sport", rotY: -Math.PI / 2, draft: 0.1 },
 };
+
+/**
+ * Eellaadimine menüü ajal: mudelid parsitakse ja tekstuurid laaditakse GPU-le
+ * enne sõidu algust, nii et spawnimisel toimub GLB-vahetus samas kaadris ja
+ * mängija ei näe protseduurilist vahevarianti.
+ */
+export function preloadVehicleModels(renderer?: THREE.WebGLRenderer): void {
+  for (const cfg of Object.values(VEHICLE_MODELS)) {
+    void loadModel(cfg.file, false).then((m) => {
+      if (!m || !renderer) return;
+      m.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          for (const mat of mats) {
+            if (!(mat instanceof THREE.MeshStandardMaterial)) continue;
+            for (const t of [mat.map, mat.normalMap, mat.roughnessMap, mat.metalnessMap, mat.aoMap, mat.emissiveMap]) {
+              if (t) renderer.initTexture(t);
+            }
+          }
+        }
+      });
+    });
+  }
+}
 
 /** Kere põhivärvid sõidukite kaupa */
 const HULL_COLORS: Record<VehicleId, number> = {
