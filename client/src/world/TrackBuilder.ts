@@ -134,12 +134,24 @@ export class TrackWorld {
       place.rotation.y = Math.atan2(g0.dirX, g0.dirZ);
       this.group.add(place);
 
-      // ITK bänner kaare alla
+      // ITK bänner kaare alla — kaks kihti, et logo oleks mõlemalt poolt
+      // õigetpidi (DoubleSide näitas tagant peegelpilti)
       void bannerTexture().then((tex) => {
         if (!tex) return;
+        const bGeo = new THREE.PlaneGeometry(g0.width * 0.5, g0.width * 0.0625);
         const banner = new THREE.Mesh(
-          new THREE.PlaneGeometry(g0.width * 0.5, g0.width * 0.0625),
-          new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.7 }),
+          bGeo,
+          new THREE.MeshStandardMaterial({ map: tex, side: THREE.FrontSide, roughness: 0.7 }),
+        );
+        const mirrored = tex.clone();
+        mirrored.wrapS = THREE.RepeatWrapping;
+        mirrored.repeat.x = -1;
+        mirrored.needsUpdate = true;
+        banner.add(
+          new THREE.Mesh(
+            bGeo,
+            new THREE.MeshStandardMaterial({ map: mirrored, side: THREE.BackSide, roughness: 0.7 }),
+          ),
         );
         banner.position.y = 4.9;
         // Esikülg lähenevate sõitjate poole (nad tulevad -Z suunast)

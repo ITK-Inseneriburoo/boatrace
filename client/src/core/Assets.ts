@@ -25,11 +25,23 @@ export function loadModel(name: string, matte = true): Promise<THREE.Group | nul
         g.traverse((o) => {
           if (o instanceof THREE.Mesh) {
             o.castShadow = true;
-            if (matte) {
-              // Kenney tekstuurid on teravad low-poly värvid — hoia matina
-              const mats = Array.isArray(o.material) ? o.material : [o.material];
-              for (const m of mats) {
-                if (m instanceof THREE.MeshStandardMaterial) m.roughness = 0.85;
+            const mats = Array.isArray(o.material) ? o.material : [o.material];
+            for (const m of mats) {
+              if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+              if (matte) {
+                // Kenney tekstuurid on teravad low-poly värvid — hoia matina
+                m.roughness = 0.85;
+              }
+              // Sketchfabi eksportides on põhimaterjal tihti ekslikult
+              // BLEND-režiimis alpha≈1-ga → kogu mudel paistab kergelt läbi
+              // (kahepoolne blend-sortimine). Tee läbipaistmatuks; tekstuuri
+              // alfaga klaasiosad jäävad alphaTest-väljalõikena läbipaistvaks.
+              // Päris klaas (opacity < 1) jääb blend'iks.
+              if (m.transparent && m.opacity >= 0.99) {
+                m.transparent = false;
+                m.alphaTest = 0.35;
+                m.depthWrite = true;
+                m.needsUpdate = true;
               }
             }
           }

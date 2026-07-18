@@ -26,22 +26,37 @@ export function buildFlagPole(height = 7): THREE.Group {
     pos.setZ(i, Math.sin((x / W) * Math.PI * 2) * 0.09 * (x / W + 0.5));
   }
   geo.computeVertexNormals();
-  const mat = new THREE.MeshStandardMaterial({
+  // Kaks kihti nagu kahelt poolt trükitud lipul: tagakülg saab
+  // horisontaalselt peegeldatud tekstuuri, et logo oleks mõlemalt
+  // poolt õigetpidi loetav (üks DoubleSide-tasapind näitas tagant peegelpilti)
+  const matFront = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.85,
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
   });
-  const flag = new THREE.Mesh(geo, mat);
+  const matBack = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.85,
+    side: THREE.BackSide,
+  });
+  const flag = new THREE.Mesh(geo, matFront);
   flag.position.set(W / 2 + 0.08, height - H / 2 - 0.15, 0);
   flag.castShadow = true;
   flag.name = "itk-flag";
+  const flagBack = new THREE.Mesh(geo, matBack);
+  flag.add(flagBack);
   g.add(flag);
 
   void flagTexture().then((tex) => {
-    if (tex) {
-      mat.map = tex;
-      mat.needsUpdate = true;
-    }
+    if (!tex) return;
+    matFront.map = tex;
+    matFront.needsUpdate = true;
+    const mirrored = tex.clone();
+    mirrored.wrapS = THREE.RepeatWrapping;
+    mirrored.repeat.x = -1;
+    mirrored.needsUpdate = true;
+    matBack.map = mirrored;
+    matBack.needsUpdate = true;
   });
   return g;
 }
