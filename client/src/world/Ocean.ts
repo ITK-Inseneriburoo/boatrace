@@ -104,7 +104,7 @@ export class Ocean {
           uWakeRect: { value: new THREE.Vector4(0, 0, 1, 1) },
           uPlanarTex: { value: null },
           uPlanarMatrix: { value: new THREE.Matrix4() },
-          uPlanarDistort: { value: 0.04 },
+          uPlanarDistort: { value: 0.055 },
         },
       ]),
     });

@@ -58,13 +58,15 @@ void main() {
   if (pc.w > 0.0) {
     vec2 puv = pc.xy / pc.w + N.xz * uPlanarDistort;
     if (puv.x > 0.0 && puv.x < 1.0 && puv.y > 0.0 && puv.y < 1.0) {
-      float pfade = 1.0 - smoothstep(60.0, 140.0, distance(uCamPos, vWorldPos));
+      float pfade = (1.0 - smoothstep(60.0, 140.0, distance(uCamPos, vWorldPos))) * 0.85;
       env = mix(env, texture2D(uPlanarTex, puv).rgb, pfade);
     }
   }
 #endif
 
-  float fresnel = 0.025 + 0.975 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+  // Lagi < 1: madala nurga all jäi vesi puhtaks peegliks ja vee oma värv
+  // kadus täielikult ära
+  float fresnel = 0.022 + 0.75 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
 
   // Sügavus maastiku kõrguskaardist → türkiissinised madalikud + kaldavaht
   float depth = 30.0;

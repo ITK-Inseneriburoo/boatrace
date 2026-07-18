@@ -17,7 +17,7 @@ import { currentTier } from "../core/Quality";
 const VEHICLE_MODELS: Partial<Record<VehicleId, { file: string; rotY: number; draft: number }>> = {
   // rotY: mudeli pikitelg keeratakse mängu +Z suunda (visuaalselt kontrollitud)
   kiirpaat: { file: "boat-speed", rotY: -Math.PI / 2, draft: 0.22 },
-  kaater: { file: "boat-riva", rotY: Math.PI / 2, draft: 0.24 },
+  kaater: { file: "boat-riva", rotY: -Math.PI / 2, draft: 0.24 },
   kalapaat: { file: "boat-fishing", rotY: 0, draft: 0.28 },
   jett: { file: "jetski-regular", rotY: -Math.PI / 2, draft: 0.12 },
   sportjett: { file: "jetski-sport", rotY: -Math.PI / 2, draft: 0.1 },

@@ -892,7 +892,10 @@ export class Game {
       this.spectatorCam.update(this.input, targets, frameDt);
       this.sky.followTarget(this.engine.camera.position);
     } else if (this.boat) {
-      this.boat.applyVisual(alpha);
+      // Pausil sim ei astu, aga alpha tiksub edasi — interpoleerimine kahe
+      // viimase (erineva) kaadri vahel paneks paadi tõmblema. Külmuta.
+      const frozen = this.paused && this.mode === "solo";
+      this.boat.applyVisual(frozen ? 1 : alpha);
       this.chaseCam.update(this.boat.physics, this.weather.waves, time, frameDt);
       this.sky.followTarget(this.boat.physics.pos);
     }

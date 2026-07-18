@@ -76,6 +76,7 @@ export class BoatPhysics {
     this.heaveVel = 0;
     this.climbRate = 0;
     this.lastSurfY = null;
+    this.wasOnRamp = false;
     this.boostEnergy = 1;
     this.boosting = false;
     this.abilityActive = false;
@@ -90,12 +91,19 @@ export class BoatPhysics {
     return Math.cos(this.yaw);
   }
 
+  /** kas mõni pinnaproov tabas sel sammul rampi */
+  private rampContact = false;
+  private wasOnRamp = false;
+
   /** Pinnakõrgus punktis — lained + võimalik rambi override */
   private surfaceAt(waves: WaveSet, x: number, z: number, t: number): number {
     const w = getWaveHeight(waves, x, z, t);
     if (this.surfaceOverride) {
       const o = this.surfaceOverride(x, z);
-      if (o > w) return o;
+      if (o > w) {
+        this.rampContact = true;
+        return o;
+      }
     }
     return w;
   }
@@ -111,16 +119,27 @@ export class BoatPhysics {
 
     // Pinnaproovid 4 kerepunktis
     const t = time;
+    this.rampContact = false;
     const hBow = this.surfaceAt(waves, this.pos.x + fx * halfL, this.pos.z + fz * halfL, t);
     const hStern = this.surfaceAt(waves, this.pos.x - fx * halfL, this.pos.z - fz * halfL, t);
     const hRight = this.surfaceAt(waves, this.pos.x + rx * halfW, this.pos.z + rz * halfW, t);
     const hLeft = this.surfaceAt(waves, this.pos.x - rx * halfW, this.pos.z - rz * halfW, t);
-    const waterY = (hBow + hStern + hRight + hLeft) / 4;
+    const onRamp = this.rampContact;
+    let waterY = (hBow + hStern + hRight + hLeft) / 4;
+    // Rambil ei tohi kere keskpunkt kaldpinnast läbi vajuda: nelja punkti
+    // keskmine on rambile sõites poole rambi kõrgusel (ahter alles vees) —
+    // toeta vähemalt keskpunkti-alusele rambipinnale
+    if (onRamp && this.surfaceOverride) {
+      const centerO = this.surfaceOverride(this.pos.x, this.pos.z);
+      if (centerO > waterY) waterY = centerO;
+    }
 
-    // Pinna tõusukiirus (rambil ronides positiivne) — hüppe stardikiiruseks
+    // Pinna tõusukiirus (rambil ronides positiivne) — hüppe stardikiiruseks.
+    // Tõus järgneb kiiresti, aga kustub aeglaselt: rambi ülaservas läheb
+    // keskmine pind mõneks kaadriks alla ja kiire kustumine sõi hüppe ära
     if (this.lastSurfY !== null) {
-      const rate = (waterY - this.lastSurfY) / dt;
-      this.climbRate = damp(this.climbRate, Math.max(rate, 0), 12, dt);
+      const rate = Math.max((waterY - this.lastSurfY) / dt, 0);
+      this.climbRate = damp(this.climbRate, rate, rate > this.climbRate ? 14 : 4, dt);
     }
     this.lastSurfY = waterY;
 
@@ -138,6 +157,13 @@ export class BoatPhysics {
       this.heaveVel += springAccel * dt;
       this.pos.y += this.heaveVel * dt;
 
+      // Ramp on jäik pind — vedru võib pehmendada ülalpool, aga mitte
+      // lasta kerel tekist läbi vajuda
+      if (onRamp && this.pos.y < waterY) {
+        this.pos.y = waterY;
+        this.heaveVel = Math.max(this.heaveVel, 0);
+      }
+
       // Glisseerimine: kiirusega nina kergelt üles
       const planingPitch = speedRatio * 0.06 * (input.throttle > 0 ? 1 : 0.3);
       const targetPitch = Math.atan2(hBow - hStern, s.hullLength) + planingPitch;
@@ -148,11 +174,13 @@ export class BoatPhysics {
       this.pitch = damp(this.pitch, targetPitch, 6, dt);
       this.roll = damp(this.roll, clamp(targetRoll, -0.5, 0.5), 5, dt);
 
-      // Õhkutõus: pind kaob jala alt (laineharja seljalt või rambilt).
-      // Rambi lõpus annab tõusukalle korraliku stardikiiruse.
-      if (this.pos.y > waterY + 0.45 && (this.heaveVel > 1.5 || this.climbRate > 2)) {
+      // Õhkutõus. Rambi ülaserv on deterministlik: kontakt kadus ja tõusu
+      // on salvestatud → hüppa alati, sõltumata vedru hetkeseisust.
+      // Laineharja-hüpped käivad endise läve kaudu.
+      const leftRampEdge = this.wasOnRamp && !onRamp && this.climbRate > 1.2;
+      if (leftRampEdge || (this.pos.y > waterY + 0.45 && (this.heaveVel > 1.5 || this.climbRate > 2))) {
         this.airborne = true;
-        this.vel.y = clamp(Math.max(this.heaveVel, this.climbRate * 1.05), 0, 9);
+        this.vel.y = clamp(Math.max(this.heaveVel, this.climbRate * 1.05), leftRampEdge ? 1.2 : 0, 9);
         this.climbRate = 0;
         this.onTakeoff();
       }
@@ -255,6 +283,8 @@ export class BoatPhysics {
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.z * dt;
     this.speed = Math.hypot(this.vel.x, this.vel.z);
+
+    this.wasOnRamp = onRamp && !this.airborne;
   }
 
   /** Hetkeline tõuge/väljalükkamine kollisioonist (faas 4) */
