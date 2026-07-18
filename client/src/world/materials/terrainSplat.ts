@@ -87,9 +87,11 @@ export function installSplat(material: THREE.MeshStandardMaterial, o: SplatOptio
           return vec3(wSand, wGrass, wRock);
         }
 
-        // Kalju triplanaarselt (3 proovi), blend |normaali| komponentide järgi
+        // Kalju triplanaarselt (3 proovi), blend |normaali| komponentide järgi.
+        // Koarsem skaala (0.4x) — 6m kordus suurte kuplite peal tiilis
+        // nähtava ruudumustrina
         vec3 rockTriplanar(sampler2D tex) {
-          vec3 p = vSplatPos * uTexScale;
+          vec3 p = vSplatPos * uTexScale * 0.4;
           // Maailma-normaal positsiooni tuletisest (vNormal on view-space)
           vec3 dx = dFdx(vSplatPos), dy = dFdy(vSplatPos);
           vec3 wn = abs(normalize(cross(dx, dy)));
@@ -103,8 +105,12 @@ export function installSplat(material: THREE.MeshStandardMaterial, o: SplatOptio
         vec3 splatAlbedo() {
           vec3 w = splatWeights();
           vec2 uv = vSplatPos.xz * uTexScale;
+          // Kaks skaalat rohule: lähedal detail, kaugel suurem muster —
+          // murrab tiilimise korduse
           vec3 sand = texture2D(uSandMap, uv).rgb * uSandTint;
-          vec3 grass = texture2D(uGrassMap, uv * 1.31).rgb * uGrassTint;
+          vec3 grassA = texture2D(uGrassMap, uv * 1.31).rgb;
+          vec3 grassB = texture2D(uGrassMap, uv * 0.23).rgb;
+          vec3 grass = mix(grassA, grassB, 0.45) * uGrassTint;
           vec3 rock = rockTriplanar(uRockMap) * uRockTint;
           vec3 c = sand * w.x + grass * w.y + rock * w.z;
           // Lumemütsid ja veealune toon värvidena splati peale

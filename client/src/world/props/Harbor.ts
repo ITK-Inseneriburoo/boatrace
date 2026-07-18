@@ -215,6 +215,15 @@ function buildKraana(scale: number, colliders: ColliderSet, world: THREE.Matrix4
     const p = new THREE.Vector3((s * W) / 2, 0, 0).applyMatrix4(world);
     colliders.circles.push({ x: p.x, z: p.z, r: 2.6 });
   }
+
+  // Realistlik kraana (Sketchfab, meshopt) asendab sõrestiku, kui laadub;
+  // tala jookseb mõlemal piki X-telge
+  void loadModel("props/harbor-crane", false).then((m) => {
+    if (!m) return;
+    fitToSize(m, H * 1.3, "y");
+    g.clear();
+    g.add(m);
+  });
   return g;
 }
 
@@ -299,10 +308,20 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
   // NB: Kenney laev on jässakam (laius ~37% pikkusest) — raadius selle järgi
   colliders.segments.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, r: Math.max(W / 2 + 0.6, L * 0.19) });
 
-  // Kenney kaubalaev, kui saadaval + ITK logo külgedel
-  void loadModel("ship-cargo-a").then((m) => {
+  // Realistlik kaubalaev (Sketchfab, meshopt), varuks Kenney oma + ITK logo külgedel
+  void loadModel("props/cargo-ship", false)
+    .then((m) => m ?? loadModel("ship-cargo-a"))
+    .then((m) => {
     if (!m) return;
-    fitToSize(m, L, "z");
+    // Sketchfabi laev on X-suunaline — keera piki kaid (+Z)
+    const xLong = new THREE.Box3().setFromObject(m);
+    if (xLong.max.x - xLong.min.x > xLong.max.z - xLong.min.z) {
+      const w = new THREE.Group();
+      w.rotation.y = Math.PI / 2;
+      w.add(m);
+      m = w;
+    }
+    fitToSize(m as THREE.Group, L, "z");
     m.position.y -= 0.4;
     g.clear();
     g.add(m);

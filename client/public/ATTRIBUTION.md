@@ -43,5 +43,8 @@ CC-BY nõuab autorile viitamist — see tabel ON see viide; hoia ajakohasena.
 | `models/boat-riva.glb` | Riva aquarama lamborghini | Anton Kovalev | https://sketchfab.com/3d-models/9d5716a2ab6645b9a1452f1d6b0372ef |
 | `models/boat-speed.glb` | Speedboat | ПГГПУ | https://sketchfab.com/3d-models/9916bd4433024202ab84e43426fc2139 |
 | `models/boat-fishing.glb` | Fisher boat | Batuhan13 | https://sketchfab.com/3d-models/385b039e95754dca8d8c045ed0c515cf |
+| `models/props/pine.glb` | Pine tree | Andriy Shekh | https://sketchfab.com/3d-models/e52769d653cd4e52a4acff3041961e65 |
+| `models/props/cargo-ship.glb` | Cargo ship | hungry_drifter | https://sketchfab.com/3d-models/b7c97df584824ca682d26daabf401f87 |
+| `models/props/harbor-crane.glb` | Harbor crane | MisterH | https://sketchfab.com/3d-models/d4d582ebd707426f93f1f5a9cdd0ce03 |
 
 Mängusisene viide: autorid on loetletud ka menüü "Info" sektsioonis (kui olemas).

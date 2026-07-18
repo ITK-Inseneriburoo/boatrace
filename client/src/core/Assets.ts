@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
 /**
  * Valikuliste glTF-mudelite laadija (Kenney kit, Sketchfab CC-BY sõidukid jm —
@@ -8,6 +9,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
  * 404/viga = jääb protseduuriline.
  */
 const loader = new GLTFLoader();
+// Meshopt-pakitud GLB-d (suured propsid) — dekooder on three'i addon, faile ei vaja
+loader.setMeshoptDecoder(MeshoptDecoder);
 const cache = new Map<string, Promise<THREE.Group | null>>();
 
 /**

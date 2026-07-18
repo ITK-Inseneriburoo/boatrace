@@ -57,8 +57,10 @@ export const WEATHERS: Record<WeatherId, WeatherPreset> = {
     rayleigh: 1.1,
     mieCoefficient: 0.004,
     mieDirectionalG: 0.8,
-    fogColor: 0xbcd8e8,
-    fogDensity: 0.0016,
+    // Heledam ja hõredam udu: HDRI-horisondiga lähem toon peidab
+    // taeva/mere õmbluse horisondil
+    fogColor: 0xccd6de,
+    fogDensity: 0.0011,
     sunColor: 0xfff3e0,
     sunIntensity: 2.6,
     hemiSkyColor: 0x9ecbee,
@@ -109,11 +111,13 @@ export const WEATHERS: Record<WeatherId, WeatherPreset> = {
     rayleigh: 2.6,
     mieCoefficient: 0.012,
     mieDirectionalG: 0.9,
-    fogColor: 0xd8b28f,
-    fogDensity: 0.012,
-    sunColor: 0xffb36b,
+    // Hallikas-roosa hämarik beeži seina asemel — päike ise jääb soojalt
+    // oranžiks, aga udu ei värvi kogu maailma kollaseks
+    fogColor: 0xb3a8a4,
+    fogDensity: 0.0085,
+    sunColor: 0xff9d70,
     sunIntensity: 1.6,
-    hemiSkyColor: 0xc79a72,
+    hemiSkyColor: 0xa9958c,
     hemiGroundColor: 0x3a3040,
     hemiIntensity: 0.45,
     exposure: 0.68,

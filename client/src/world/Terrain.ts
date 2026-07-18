@@ -167,12 +167,14 @@ export class Terrain {
     ]);
     if (!sand || !grass || !rock) return;
 
-    // Vertex-värvid → ainult heleduse variatsioon (shader teeb kihivärvid)
+    // Vertex-värvid → ainult heleduse variatsioon (shader teeb kihivärvid).
+    // Amplituud hoitakse väike — 256-võrgu vertex-interpolatsioon joonistus
+    // tugevama variatsiooniga ruudustikuna välja
     const pos = geo.getAttribute("position") as THREE.BufferAttribute;
     const col = geo.getAttribute("color") as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
-      const v = fbm2(pos.getX(i) * 0.05, pos.getZ(i) * 0.05, 2, track.seed + 7) * 0.16;
-      const tint = 1 + (v - 0.08);
+      const v = fbm2(pos.getX(i) * 0.05, pos.getZ(i) * 0.05, 2, track.seed + 7) * 0.08;
+      const tint = 1 + (v - 0.04);
       col.setXYZ(i, tint, tint, tint);
     }
     col.needsUpdate = true;
