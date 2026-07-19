@@ -221,13 +221,36 @@ function buildKraana(scale: number, colliders: ColliderSet, world: THREE.Matrix4
   void loadModel("props/harbor-crane", false).then((m) => {
     if (!m) return;
     fitToSize(m, H * 1.3, "y");
-    // Mudel seisab peenikestel tugijalgadel, rattad ripuvad ~1 m õhus —
-    // eemalt paistab kraana hõljuvat. Vajuta alla, et rattad toetuks maha
-    m.position.y -= 1.0;
+    // fitToSize joondab bbox-i põhja, aga mudeli bbox-is ripub üksikuid
+    // tippe (trossiotsad) ratastest tükk maad allpool — kraana jäi õhku
+    // hõljuma. Joonda rataste tegelik toetuspind maapinnale.
+    m.position.y -= supportY(m);
     g.clear();
     g.add(m);
   });
   return g;
+}
+
+/**
+ * Mudeli robustne toetuspind: tippude Y 0,5-protsentiil vanema ruumis.
+ * Bbox-miinimum eksib, kui geomeetrias ripub üksikuid madalaid tippe.
+ */
+function supportY(m: THREE.Group): number {
+  m.updateMatrixWorld(true);
+  const ys: number[] = [];
+  const v = new THREE.Vector3();
+  m.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const pos = (o.geometry as THREE.BufferGeometry).getAttribute("position");
+    const step = Math.max(1, Math.floor(pos.count / 20000));
+    for (let i = 0; i < pos.count; i += step) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+      ys.push(v.y);
+    }
+  });
+  if (!ys.length) return 0;
+  ys.sort((a, b) => a - b);
+  return ys[Math.floor(0.005 * (ys.length - 1))];
 }
 
 /** Konteinerivirn (2–3 kihti) */
