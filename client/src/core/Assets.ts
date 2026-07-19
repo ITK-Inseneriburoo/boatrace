@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { loadPbrSet } from "./Textures";
 
 /**
  * Valikuliste glTF-mudelite laadija (Kenney kit, Sketchfab CC-BY sõidukid jm —
@@ -73,6 +74,46 @@ export function loadModel(name: string, matte = true): Promise<THREE.Group | nul
     });
     return c;
   });
+}
+
+/**
+ * Ühekordne eelsoojendus menüü ajal: maastikutekstuurid ja raja propide
+ * GLB-d laaditakse + tõstetakse GPU-le enne, kui mängija sõitma jõuab.
+ * Kõik laadijad cache'ivad, nii et rajaehitus saab hiljem samad promise'id.
+ * NB: matte-lipp peab klappima kasutuskoha omaga (cache-võti sisaldab seda).
+ */
+export function preloadWorldAssets(renderer?: THREE.WebGLRenderer): void {
+  for (const base of ["/textures/terrain/sand", "/textures/terrain/grass", "/textures/terrain/rock"]) {
+    void loadPbrSet(base).then((set) => {
+      if (!set || !renderer) return;
+      for (const t of [set.color, set.normal, set.rough, set.ao]) {
+        if (t) renderer.initTexture(t);
+      }
+    });
+  }
+  const models: [string, boolean][] = [
+    ["gate-finish", true],
+    ["props/pine", true],
+    ["props/harbor-crane", false],
+    ["props/cargo-ship", false],
+    ["ship-cargo-a", true],
+  ];
+  for (const [name, matte] of models) {
+    void loadModel(name, matte).then((m) => {
+      if (!m || !renderer) return;
+      m.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          for (const mat of mats) {
+            if (!(mat instanceof THREE.MeshStandardMaterial)) continue;
+            for (const t of [mat.map, mat.normalMap, mat.roughnessMap, mat.metalnessMap, mat.aoMap, mat.emissiveMap]) {
+              if (t) renderer.initTexture(t);
+            }
+          }
+        }
+      });
+    });
+  }
 }
 
 /**
