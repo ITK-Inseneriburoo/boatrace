@@ -84,6 +84,12 @@ export class BoatPhysics {
     this.boostRefillDelay = 0;
   }
 
+  /** Täida mängija käsitsi kasutatav boost kohe lõpuni. */
+  refillBoost(): void {
+    this.boostEnergy = 1;
+    this.boostRefillDelay = 0;
+  }
+
   get forwardX(): number {
     return Math.sin(this.yaw);
   }

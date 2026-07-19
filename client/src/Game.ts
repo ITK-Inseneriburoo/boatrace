@@ -85,6 +85,7 @@ export class Game {
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
   private boostCooldown = new Map<number, number>();
+  private activeRamp: number | null = null;
   private shotReadyAt = 0;
   private shots: WaterShot[] = [];
   private shotGeo = new THREE.SphereGeometry(0.7, 12, 8);
@@ -619,6 +620,7 @@ export class Game {
     this.engine.scene.add(this.boat.mesh);
     const spawn = this.track.spawnPoint(slot);
     this.boat.physics.reset(spawn.x, spawn.z, spawn.yaw);
+    this.activeRamp = null;
     this.boat.physics.surfaceOverride = this.track.surfaceOverride;
     this.boat.physics.onLanding = (impact) => {
       this.chaseCam.addTrauma(Math.min(impact * 0.06, 0.5));
@@ -641,6 +643,74 @@ export class Game {
       VEHICLES[vehicle].tyyp === "jett" ? 76 : 52,
       false,
     );
+  }
+
+  private checkRampReward(prevX: number, prevZ: number): void {
+    const physics = this.boat?.physics;
+    if (!physics) return;
+
+    const local = (
+      ramp: TrackWorld["ramps"][number],
+      x: number,
+      z: number,
+    ): [number, number] => {
+      const px = x - ramp.x;
+      const pz = z - ramp.z;
+      return [
+        px * ramp.dirX + pz * ramp.dirZ,
+        px * -ramp.dirZ + pz * ramp.dirX,
+      ];
+    };
+
+    if (this.activeRamp === null) {
+      for (let i = 0; i < this.track.ramps.length; i++) {
+        const ramp = this.track.ramps[i];
+        const [u, v] = local(ramp, physics.pos.x, physics.pos.z);
+        const forwardSpeed = physics.vel.x * ramp.dirX + physics.vel.z * ramp.dirZ;
+        if (
+          u >= 0 &&
+          u < ramp.length &&
+          Math.abs(v) <= ramp.width / 2 &&
+          forwardSpeed > 2
+        ) {
+          this.activeRamp = i;
+          break;
+        }
+      }
+    }
+
+    if (this.activeRamp === null) return;
+    const ramp = this.track.ramps[this.activeRamp];
+    if (!ramp) {
+      this.activeRamp = null;
+      return;
+    }
+
+    const [prevU, prevV] = local(ramp, prevX, prevZ);
+    const [u, v] = local(ramp, physics.pos.x, physics.pos.z);
+    const forwardSpeed = physics.vel.x * ramp.dirX + physics.vel.z * ramp.dirZ;
+    const du = u - prevU;
+
+    if (prevU < ramp.length && u >= ramp.length && du > 0) {
+      const alpha = (ramp.length - prevU) / du;
+      const crossV = prevV + (v - prevV) * alpha;
+      if (Math.abs(crossV) <= ramp.width / 2 + 0.25 && forwardSpeed > 2) {
+        physics.refillBoost();
+        this.hud.flashCenter(t("hud.boostTais"), 1.2);
+        this.sfx.chime();
+      }
+      this.activeRamp = null;
+      return;
+    }
+
+    if (
+      u < -physics.stats.hullLength ||
+      u > ramp.length + physics.stats.hullLength + 1 ||
+      Math.abs(v) > ramp.width / 2 + 0.75 ||
+      forwardSpeed < -2
+    ) {
+      this.activeRamp = null;
+    }
   }
 
   private stopRaceAudio(): void {
@@ -738,6 +808,7 @@ export class Game {
     if (this.mode === "solo") this.hud.flashCenter(t("hud.puhasRingRikutud"), 0.9);
     const g = this.race.lastGate;
     this.boat.physics.reset(g.center.x, g.center.z, Math.atan2(g.dirX, g.dirZ));
+    this.activeRamp = null;
     this.boat.physics.pos.y = getWaveHeight(
       this.weather.waves,
       g.center.x,
@@ -820,7 +891,10 @@ export class Game {
             slide: this.input.slide,
             boost: this.input.boost,
           };
+      const prevX = this.boat.physics.pos.x;
+      const prevZ = this.boat.physics.pos.z;
       this.boat.update(inp, this.weather.waves, this.engine.simTime, dt);
+      this.checkRampReward(prevX, prevZ);
       const hit = resolveCollisions(this.boat.physics, this.track.colliders, this.track.terrain);
       if (hit && !hit.soft) {
         this.chaseCam.addTrauma(Math.min(hit.impact * 0.05, 0.6));

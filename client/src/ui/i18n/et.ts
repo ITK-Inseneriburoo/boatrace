@@ -35,6 +35,7 @@ const et = {
   "hud.start": "START!",
   "hud.finis": "FINIŠ!",
   "hud.boost": "HOOG!",
+  "hud.boostTais": "BOOST TÄIS!",
   "hud.varavMoodas": "VÄRAVAST MÖÖDA",
   "hud.puhasRingRikutud": "PUHAS RING RIKUTUD",
   "hud.tabamus": "TABAMUS!",
