@@ -3,6 +3,7 @@ import type { StatePayload } from "@shared/protocol";
 import type { VehicleId } from "@shared/types";
 import { INTERP_DELAY_MS, MAX_EXTRAPOLATION_MS } from "@shared/constants";
 import { angleLerp, lerp } from "@shared/math";
+import { VEHICLES } from "@shared/vehicles";
 import { buildBoatModel } from "../boats/BoatFactory";
 
 interface Snapshot {
@@ -11,6 +12,102 @@ interface Snapshot {
   r: [number, number, number];
   v: [number, number];
   s: number;
+}
+
+interface PlayerMarker {
+  group: THREE.Group;
+  labelMaterial: THREE.SpriteMaterial;
+  ringMaterial: THREE.MeshBasicMaterial;
+  dispose(): void;
+}
+
+function colorCss(color: number): string {
+  return `#${(color & 0xffffff).toString(16).padStart(6, "0")}`;
+}
+
+/** Kaamerasse pöörduv nimesilt + veepinna lähedal olev mängijavärvi rõngas. */
+function buildPlayerMarker(name: string, color: number, ringRadius: number): PlayerMarker {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d")!;
+
+  // Tume taust hoiab valge teksti loetavana nii taeva, vahu kui ka maastiku ees.
+  const left = 8;
+  const top = 8;
+  const right = canvas.width - 8;
+  const bottom = canvas.height - 18;
+  const radius = 26;
+  ctx.beginPath();
+  ctx.moveTo(left + radius, top);
+  ctx.lineTo(right - radius, top);
+  ctx.quadraticCurveTo(right, top, right, top + radius);
+  ctx.lineTo(right, bottom - radius);
+  ctx.quadraticCurveTo(right, bottom, right - radius, bottom);
+  ctx.lineTo(left + radius, bottom);
+  ctx.quadraticCurveTo(left, bottom, left, bottom - radius);
+  ctx.lineTo(left, top + radius);
+  ctx.quadraticCurveTo(left, top, left + radius, top);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(4, 16, 22, 0.82)";
+  ctx.fill();
+  ctx.strokeStyle = colorCss(color);
+  ctx.lineWidth = 9;
+  ctx.stroke();
+
+  ctx.font = "700 54px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.72)";
+  ctx.lineWidth = 8;
+  ctx.strokeText(name, canvas.width / 2, 61, 450);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(name, canvas.width / 2, 61, 450);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  const labelMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const label = new THREE.Sprite(labelMaterial);
+  label.position.y = 3.1;
+  label.scale.set(4.8, 1.2, 1);
+  label.renderOrder = 100;
+
+  const ringGeometry = new THREE.RingGeometry(ringRadius - 0.16, ringRadius + 0.16, 48);
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.72,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+  ring.position.y = 0.18;
+  ring.rotation.x = -Math.PI / 2;
+  ring.renderOrder = 4;
+
+  const group = new THREE.Group();
+  group.add(label, ring);
+  return {
+    group,
+    labelMaterial,
+    ringMaterial,
+    dispose: () => {
+      texture.dispose();
+      labelMaterial.dispose();
+      ringGeometry.dispose();
+      ringMaterial.dispose();
+    },
+  };
 }
 
 /**
@@ -29,16 +126,22 @@ export class RemoteBoat {
   private buffer: Snapshot[] = [];
   private ghost = false;
   private materials: THREE.Material[] = [];
+  private readonly boatModel: THREE.Group;
+  private readonly marker: PlayerMarker;
 
   constructor(
     public readonly playerId: string,
     public readonly vehicle: VehicleId,
+    name: string,
     color: number,
   ) {
-    this.mesh = buildBoatModel(vehicle, color);
+    this.mesh = new THREE.Group();
+    this.boatModel = buildBoatModel(vehicle, color);
+    this.marker = buildPlayerMarker(name, color, VEHICLES[vehicle].hullRadius + 0.65);
+    this.mesh.add(this.boatModel, this.marker.group);
     this.collectMaterials();
     // GLB-vahetus toob uued materjalid — kogu uuesti ja taasta läbipaistvus
-    this.mesh.userData.onModelSwapped = () => {
+    this.boatModel.userData.onModelSwapped = () => {
       this.collectMaterials();
       const g = this.ghost;
       this.ghost = !g; // sunni setGhost uuesti rakendama
@@ -48,7 +151,7 @@ export class RemoteBoat {
 
   private collectMaterials(): void {
     this.materials = [];
-    this.mesh.traverse((o) => {
+    this.boatModel.traverse((o) => {
       if (o instanceof THREE.Mesh) {
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         this.materials.push(...mats);
@@ -122,9 +225,12 @@ export class RemoteBoat {
       m.opacity = on ? 0.35 : 1;
       m.needsUpdate = true;
     }
+    this.marker.labelMaterial.opacity = on ? 0.35 : 1;
+    this.marker.ringMaterial.opacity = on ? 0.2 : 0.72;
   }
 
   dispose(): void {
     this.mesh.removeFromParent();
+    this.marker.dispose();
   }
 }

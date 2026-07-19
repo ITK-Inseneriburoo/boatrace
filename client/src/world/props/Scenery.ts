@@ -4,6 +4,7 @@ import { mulberry32 } from "@shared/math";
 import { getWaveHeight, type WaveSet } from "@shared/waves";
 import { balloonLogoTexture } from "../../core/Brand";
 import type { Terrain } from "../Terrain";
+import { TrackLandmarks } from "./Landmarks";
 
 interface WingPair {
   left: THREE.Object3D;
@@ -244,6 +245,7 @@ export class TrackScenery {
   private readonly rotors: { root: THREE.Object3D; speed: number; phase: number }[] = [];
   private readonly gondolas: Gondola[] = [];
   private readonly waterfallMaterials: THREE.ShaderMaterial[] = [];
+  private readonly landmarks: TrackLandmarks;
 
   private weather: WeatherId = "paike";
   private detailScale = 1;
@@ -251,6 +253,7 @@ export class TrackScenery {
 
   constructor(trackId: TrackId, seed: number, terrain: Terrain) {
     this.rnd = mulberry32(seed + 8128);
+    this.landmarks = new TrackLandmarks(trackId, seed, terrain);
     this.group.name = "rajadekoratsioonid";
     this.group.add(
       this.detailGroup,
@@ -259,6 +262,7 @@ export class TrackScenery {
       this.calmExtraGroup,
       this.sunnyGroup,
       this.sunnyExtraGroup,
+      this.landmarks.group,
     );
 
     switch (trackId) {
@@ -279,6 +283,7 @@ export class TrackScenery {
         break;
       case "joekanjon":
         this.buildWaterfall(terrain, 145, 35);
+        this.buildWaterfall(terrain, -170, 55);
         this.addBirdFlock("kotkas", 0, 0, 270, 190, 62, 5, this.calmGroup);
         this.addBirdFlock("kotkas", -30, 20, 175, 130, 78, 3, this.calmExtraGroup);
         this.addBalloon(0, 0, 315, 225, 112, [0x9c413d, 0xf0b34f], this.sunnyGroup);
@@ -301,6 +306,7 @@ export class TrackScenery {
 
   setDetailScale(scale: number): void {
     this.detailScale = scale;
+    this.landmarks.setDetailScale(scale);
     this.applyVisibility();
   }
 
@@ -356,6 +362,7 @@ export class TrackScenery {
       gondola.root.position.y -= 2.8;
     }
     for (const material of this.waterfallMaterials) material.uniforms.uTime.value = time;
+    this.landmarks.update(waves, time);
   }
 
   private applyVisibility(): void {

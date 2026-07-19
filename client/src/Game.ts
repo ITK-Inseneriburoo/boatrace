@@ -604,7 +604,7 @@ export class Game {
     this.clearRemoteBoats();
     for (const p of this.room.players) {
       if (p.id === this.net.playerId || !(p.id in spawns)) continue;
-      const rb = new RemoteBoat(p.id, p.vehicle, p.color);
+      const rb = new RemoteBoat(p.id, p.vehicle, p.name, p.color);
       const sp = this.track.spawnPoint(spawns[p.id] ?? 0);
       rb.mesh.position.set(sp.x, 0, sp.z);
       rb.mesh.rotation.y = sp.yaw;
