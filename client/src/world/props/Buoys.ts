@@ -45,6 +45,10 @@ export class BuoyField {
       color: 0xffffff,
     });
     this.mesh = new THREE.InstancedMesh(buoyGeometry(), mat, Math.max(instances.length, 1));
+    // Instantsimaatriksid seatakse alles update'is ja liiguvad lainetega.
+    // Esimene soojendusrender arvutaks muidu bounding sphere'i nullpunktis
+    // ning kogu poiväli kaoks, kui see vale piir jääb kaamera frustumist välja.
+    this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
     for (let i = 0; i < instances.length; i++) {
       this.mesh.setColorAt(i, this.baseColor);
