@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { TrackId, VehicleId, WeatherId } from "@shared/types";
 import { angleLerp, lerp } from "@shared/math";
+import { getTrack } from "@shared/tracks";
 import { buildBoatModel } from "../boats/BoatFactory";
 import type { BoatPhysics } from "./BoatPhysics";
 
@@ -17,7 +18,9 @@ export interface GhostData {
 const SAMPLE_HZ = 15;
 
 function key(trackId: TrackId, weatherId: WeatherId, vehicle: VehicleId): string {
-  return `boatrace.ghost.${trackId}.${weatherId}.${vehicle}`;
+  const version = getTrack(trackId).ghostVersion;
+  const trackKey = version === undefined ? trackId : `${trackId}.v${version}`;
+  return `boatrace.ghost.${trackKey}.${weatherId}.${vehicle}`;
 }
 
 export function loadGhostData(

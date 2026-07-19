@@ -10,6 +10,7 @@ export const sadamalinn: TrackDef = {
   kirjeldus: "Tehniline sadamaslalom kraanade ja kaubalaevade vahel",
   defaultLaps: 2,
   seed: 7001,
+  ghostVersion: 2,
   route: [
     [0, -180],
     [130, -195],

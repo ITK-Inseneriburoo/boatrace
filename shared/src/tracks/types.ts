@@ -79,6 +79,8 @@ export interface TrackDef {
   kirjeldus: string;
   defaultLaps: number;
   seed: number;
+  /** Suurenda, kui raja geomeetria muutub ja vanad ghost'id enam ei sobi. */
+  ghostVersion?: number;
   /** suletud Catmull-Rom splaini kontrollpunktid [x,z] */
   route: [number, number][];
   /** sõidukanali laius (m) — süvendatakse alati veeks */
