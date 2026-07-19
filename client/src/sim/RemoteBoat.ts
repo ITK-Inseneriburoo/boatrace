@@ -85,7 +85,7 @@ function buildPlayerMarker(name: string, color: number, ringRadius: number): Pla
   const ringMaterial = new THREE.MeshBasicMaterial({
     color,
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.5,
     side: THREE.DoubleSide,
     depthWrite: false,
     toneMapped: false,
@@ -226,7 +226,7 @@ export class RemoteBoat {
       m.needsUpdate = true;
     }
     this.marker.labelMaterial.opacity = on ? 0.35 : 1;
-    this.marker.ringMaterial.opacity = on ? 0.2 : 0.72;
+    this.marker.ringMaterial.opacity = on ? 0.14 : 0.5;
   }
 
   dispose(): void {
