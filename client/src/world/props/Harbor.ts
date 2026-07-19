@@ -388,8 +388,14 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
       // kitseneva ahtri/vööri juures kerest välja ja paistaks hõljuvana
       for (const s of [-1, 1]) {
         const logo = new THREE.Mesh(
-          new THREE.PlaneGeometry(L * 0.16, L * 0.08),
-          new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.6 }),
+          new THREE.PlaneGeometry(L * 0.096, L * 0.048),
+          // Kergelt läbipaistev, et kere ilmastikutekstuur kumaks läbi
+          new THREE.MeshStandardMaterial({
+            map: tex,
+            transparent: true,
+            opacity: 0.8,
+            roughness: 0.6,
+          }),
         );
         logo.position.set(s * (halfW + 0.06), logoY, (box.min.z + box.max.z) / 2);
         logo.rotation.y = (s * Math.PI) / 2;
