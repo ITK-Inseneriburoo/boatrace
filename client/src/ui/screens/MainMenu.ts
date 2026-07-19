@@ -244,12 +244,17 @@ export class MainMenu implements Screen {
       {},
       h(
         "div",
-        { class: "center-wrap menu-wrap" },
+        { class: "center-wrap" },
         h("h1", { class: "title" }, t("menu.title")),
         h("p", { class: "subtitle" }, t("menu.subtitle")),
         h(
           "div",
           { class: "panel menu-panel" },
+          h("img", {
+            class: "panel-brand",
+            src: "/brand/logo-ITK-white.svg",
+            alt: "ITK Inseneribüroo",
+          }),
           section(
             h(
               "div",

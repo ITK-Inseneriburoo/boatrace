@@ -158,14 +158,19 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
 }
 .swatch.selected { border-color: #fff; }
 
-/* Ruum globaalsele brändimärgile, et tiitel selle alla ei jookseks */
-.menu-wrap { padding-top: 64px; }
-
 .menu-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   max-width: 980px;
+  /* Suurel paneelil joonistab backdrop-blur ümarnurgad kandilise
+     artefaktiga (Chromiumi viga) — katvam taust ilma blurita */
+  background: rgba(10, 17, 24, 0.88);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  /* Vari ainult allapoole, mitte uduna ümber paneeli */
+  box-shadow: 0 22px 40px -16px rgba(0, 0, 0, 0.55);
 }
 .menu-section .row { justify-content: center; }
 .menu-section {
@@ -238,17 +243,13 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
 .statbar > div { height: 100%; background: var(--accent); }
 
 /* ---------- Bränd ---------- */
-#brand-badge {
+/* ITK logo menüüpaneeli ülanurgas — paneeli osa, mitte eraldi ülekate */
+.panel-brand {
   position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  height: 26px;
-  padding: 7px 14px;
-  box-sizing: content-box;
-  border-radius: 10px;
-  background: rgba(8, 14, 20, 0.55);
-  border: 1px solid var(--panel-border);
+  top: 18px;
+  right: 22px;
+  height: 30px;
+  opacity: 0.85;
   pointer-events: none;
 }
 
