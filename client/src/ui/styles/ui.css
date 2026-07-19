@@ -250,6 +250,10 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
 
 /* ---------- HUD ---------- */
 #hud { pointer-events: none; }
+#hud-brand { display: none; }
+#hud.multiplayer #hud-brand { display: block; }
+#hud.multiplayer #hud-pos,
+#hud.multiplayer #hud-spectator { top: 66px; }
 #hud .hud-item { position: absolute; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7); }
 
 #hud-speed {

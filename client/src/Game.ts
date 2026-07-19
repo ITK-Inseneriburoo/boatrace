@@ -260,6 +260,7 @@ export class Game {
     if (this.sky.envCube) this.ocean.setEnvironment(this.sky.envCube, this.sky.sunDir);
     this.audio.setAmbient(w.id);
     this.rain.setEnabled(w.rainCount > 0);
+    this.track.setWeather(w.id);
     // IBL-peegelduste tugevus ilma järgi; hiljem spawnitavad paadid
     // võtavad sama väärtuse buildBoatModel'is
     setCurrentEnvIntensity(w.envMapIntensity);
@@ -283,6 +284,7 @@ export class Game {
     // Soojenda maailma varad valitud resolutsioonis (cache'itud, idempotentne)
     preloadWorldAssets(this.engine.renderer);
     this.track?.terrain.setDetailNormals(tier.terrainNormals);
+    this.track?.setSceneryDetail(tier.particleScale);
     this.ocean.applyTier({ foamTex: tier.ocean.foamTex, shoreAlpha: tier.ocean.shoreAlpha });
 
     // Planar-peegeldus (korge/ultra)
@@ -323,6 +325,8 @@ export class Game {
     if (this.track.def.id === id) return;
     this.engine.scene.remove(this.track.group);
     this.track = new TrackWorld(getTrack(id));
+    this.track.setWeather(this.weather.id);
+    this.track.setSceneryDetail(QUALITY_TIERS[this.effectiveGraphics].particleScale);
     this.engine.scene.add(this.track.group);
     this.boostCooldown.clear();
     this.attachTrackDeps();
@@ -566,7 +570,7 @@ export class Game {
     this.lastCountShown = -1;
 
     this.screens.show(null);
-    this.hud.show();
+    this.hud.show(true);
     this.hud.setSpectator(this.spectating, t("hud.vaatleja.legend"));
     this.gateArrow.visible = !this.spectating;
     this.state = "countdown";

@@ -8,7 +8,7 @@ export const sadamalinn: TrackDef = {
   id: "sadamalinn",
   nimi: "Sadamalinn",
   kirjeldus: "Kraanade ja kaubalaevade vahel läbi tööstussadama",
-  defaultLaps: 3,
+  defaultLaps: 2,
   seed: 7001,
   route: [
     [0, -180],

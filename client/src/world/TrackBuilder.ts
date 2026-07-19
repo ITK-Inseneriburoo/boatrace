@@ -9,6 +9,7 @@ import { buildObstacleMeshes, type PlacedObstacle } from "./props/Obstacles";
 import { buildVegetation } from "./props/Vegetation";
 import { buildProp } from "./props/Harbor";
 import { buildFlagPole, updateFlags } from "./props/Flags";
+import { TrackScenery } from "./props/Scenery";
 import { bannerTexture } from "../core/Brand";
 import { fitToBox, loadModel, wrapRotated } from "../core/Assets";
 import type { ColliderSet } from "../sim/Collisions";
@@ -54,6 +55,7 @@ export class TrackWorld {
   private punaneField: BuoyField;
   private rohelineField: BuoyField;
   private startField: BuoyField;
+  private scenery: TrackScenery;
 
   constructor(public def: TrackDef) {
     this.curve = new THREE.CatmullRomCurve3(
@@ -72,6 +74,8 @@ export class TrackWorld {
     // Maastik
     this.terrain = new Terrain(def, this.polyline);
     this.group.add(this.terrain.mesh);
+    this.scenery = new TrackScenery(def.id, def.seed, this.terrain);
+    this.group.add(this.scenery.group);
 
     // Väravad: stardijoon (t=0, ruuduline) + tavaväravad def-ist
     const punane: BuoyInstance[] = [];
@@ -261,6 +265,14 @@ export class TrackWorld {
     });
   }
 
+  setWeather(weather: import("@shared/types").WeatherId): void {
+    this.scenery.setWeather(weather);
+  }
+
+  setSceneryDetail(scale: number): void {
+    this.scenery.setDetailScale(scale);
+  }
+
   /** Rambipind füüsika overrideks */
   surfaceOverride = (x: number, z: number): number => {
     let best = -Infinity;
@@ -327,5 +339,6 @@ export class TrackWorld {
       b.mesh.scale.setScalar(pulse);
     }
     updateFlags(this.group, time);
+    this.scenery.update(waves, time);
   }
 }

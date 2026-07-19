@@ -21,6 +21,7 @@ export interface MenuChoices {
 }
 
 const LS_KEY = "boatrace.menu";
+const DEFAULT_LAPS = 2;
 
 /** Peamenüü: nimi, värv, sõiduk, ilm → proovisõit (võrgumäng faasis 6) */
 export class MainMenu implements Screen {
@@ -40,7 +41,7 @@ export class MainMenu implements Screen {
     vehicle: "kiirpaat",
     track: "saarestik",
     weather: "paike",
-    laps: 3,
+    laps: DEFAULT_LAPS,
     graphics: "korge",
   };
   private nameInput: HTMLInputElement;
@@ -49,10 +50,14 @@ export class MainMenu implements Screen {
   constructor() {
     // Taasta viimased valikud
     try {
-      const saved = JSON.parse(localStorage.getItem(LS_KEY) ?? "{}");
+      const saved = JSON.parse(localStorage.getItem(LS_KEY) ?? "{}") as Partial<MenuChoices> & {
+        defaultLapsVersion?: number;
+      };
       Object.assign(this.choices, saved);
+      // Vana vaikimisi 3 ringi salvestus viiakse üks kord uuele vaikeväärtusele.
+      if (!saved.defaultLapsVersion && saved.laps === 3) this.choices.laps = DEFAULT_LAPS;
     } catch { /* tühi */ }
-    this.choices.laps = this.choices.laps || TRACKS[this.choices.track]?.defaultLaps || 3;
+    this.choices.laps = this.choices.laps || TRACKS[this.choices.track]?.defaultLaps || DEFAULT_LAPS;
 
     this.nameInput = h("input", { type: "text", placeholder: t("menu.nimi.placeholder"), maxlength: "20" });
     this.nameInput.value = this.choices.name;
@@ -224,7 +229,7 @@ export class MainMenu implements Screen {
       this.choices.vehicle = pick(VEHICLE_IDS);
       this.choices.track = track;
       this.choices.weather = weather;
-      this.choices.laps = TRACKS[track]?.defaultLaps ?? 3;
+      this.choices.laps = TRACKS[track]?.defaultLaps ?? DEFAULT_LAPS;
       selectByData(swatchEls, "color", String(this.choices.color));
       selectByData(cardEls, "vehicle", this.choices.vehicle);
       selectByData(trEls, "track", this.choices.track);
@@ -328,6 +333,6 @@ export class MainMenu implements Screen {
   }
 
   private persist(): void {
-    localStorage.setItem(LS_KEY, JSON.stringify(this.choices));
+    localStorage.setItem(LS_KEY, JSON.stringify({ ...this.choices, defaultLapsVersion: 2 }));
   }
 }

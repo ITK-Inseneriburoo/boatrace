@@ -93,6 +93,12 @@ export class Hud {
     this.el = h(
       "div",
       { id: "hud" },
+      h("img", {
+        class: "hud-item panel-brand",
+        id: "hud-brand",
+        src: "/brand/logo-ITK-white.svg",
+        alt: "ITK Inseneribüroo",
+      }),
       this.legendEl,
       this.pauseEl,
       h(
@@ -120,11 +126,13 @@ export class Hud {
     this.el.appendChild(this.minimap.canvas);
   }
 
-  show(): void {
+  show(multiplayer = false): void {
+    this.el.classList.toggle("multiplayer", multiplayer);
     this.el.style.display = "";
   }
   hide(): void {
     this.el.style.display = "none";
+    this.el.classList.remove("multiplayer");
     this.legendEl.style.display = "none";
   }
 

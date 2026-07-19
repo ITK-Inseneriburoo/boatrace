@@ -8,7 +8,7 @@ export const saarestik: TrackDef = {
   id: "saarestik",
   nimi: "Saarestik",
   kirjeldus: "Käänuline kanal männisaarte vahel — klassika",
-  defaultLaps: 3,
+  defaultLaps: 2,
   seed: 1337,
   route: [
     [0, -260],

@@ -87,6 +87,18 @@ export async function signTexture(text: string): Promise<THREE.Texture | null> {
   return makeTexture(c);
 }
 
+/** Õhupalli valge graafiline märk ilma ITK tekstita (läbipaistev taust) */
+export async function balloonLogoTexture(): Promise<THREE.Texture | null> {
+  const img = await loadImage("/brand/logo-ITK-white.svg");
+  if (!img) return null;
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 512;
+  const g = c.getContext("2d")!;
+  g.drawImage(img, 32, 32, 448, 448);
+  return makeTexture(c);
+}
+
 /** Laeva küljelogo (läbipaistev taust) */
 export async function shipLogoTexture(): Promise<THREE.Texture | null> {
   const img = await loadImage("/brand/logo-ITK-white.svg");

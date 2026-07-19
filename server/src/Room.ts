@@ -27,7 +27,7 @@ export class Room {
   name: string;
   players: Player[] = [];
   hostId: string;
-  config: RoomConfig = { trackId: "saarestik", weatherId: "paike", laps: 3 };
+  config: RoomConfig = { trackId: "saarestik", weatherId: "paike", laps: 2 };
   phase: RacePhase = "lobby";
 
   raceStartsAt = 0;

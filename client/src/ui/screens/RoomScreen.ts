@@ -72,7 +72,7 @@ export class RoomScreen implements Screen {
       const pick = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
       const trackId = pick(TRACK_IDS);
       const weatherId = pick(TRACKS[trackId]?.allowedWeathers ?? (Object.keys(WEATHERS) as WeatherId[]));
-      this.onConfigure(trackId, weatherId, TRACKS[trackId]?.defaultLaps ?? 3);
+      this.onConfigure(trackId, weatherId, TRACKS[trackId]?.defaultLaps ?? 2);
     };
     const leaveBtn = h("button", {}, t("tuba.lahku"));
     leaveBtn.onclick = () => this.onLeave();
