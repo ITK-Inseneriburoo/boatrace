@@ -251,7 +251,12 @@ export class Game {
 
     this.screens.show(this.menu);
 
-    this.engine.onUpdate = (dt) => this.update(dt);
+    this.engine.onUpdate = (dt) => {
+      this.update(dt);
+      // Ära kustuta hetkesisendit renderkaadris: 90/120 Hz ekraanil ei ole
+      // igal renderkaadril 60 Hz simulatsioonisammu ja vajutus läheks kaduma.
+      this.input.endUpdate();
+    };
     this.engine.onRender = (alpha, frameDt) => this.render(alpha, frameDt);
   }
 
@@ -1164,7 +1169,6 @@ export class Game {
       this.updateHud(frameDt);
     }
 
-    this.input.endFrame();
   }
 
   private checkBoosts(): void {

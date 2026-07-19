@@ -40,6 +40,9 @@ export class TouchControls {
   private sensorTimer: number | null = null;
   private tiltRequest: Promise<void> | null = null;
   private manualSteering = false;
+  private readonly activePointers = new Map<HTMLElement, number>();
+  private readonly lastPointerDown = new WeakMap<HTMLElement, number>();
+  private readonly resetFallbackTouches: Array<() => void> = [];
 
   constructor(private readonly input: Input) {
     this.steerKnob = h("div", { class: "touch-stick-knob" });
@@ -81,10 +84,7 @@ export class TouchControls {
       },
       "⟳",
     ) as HTMLButtonElement;
-    this.recalibrateBtn.onpointerdown = (e) => {
-      e.preventDefault();
-      this.recalibrate();
-    };
+    this.bindTap(this.recalibrateBtn, () => this.recalibrate());
     this.steerModeBtn = h(
       "button",
       {
@@ -95,10 +95,7 @@ export class TouchControls {
       },
       t("touch.kasitsi"),
     ) as HTMLButtonElement;
-    this.steerModeBtn.onpointerdown = (event) => {
-      event.preventDefault();
-      this.toggleManualSteering();
-    };
+    this.bindTap(this.steerModeBtn, () => this.toggleManualSteering());
     const tools = h(
       "div",
       { class: "touch-tools" },
@@ -137,6 +134,8 @@ export class TouchControls {
     window.addEventListener("resize", this.syncOrientation);
     screen.orientation?.addEventListener("change", this.onScreenOrientationChange);
     window.addEventListener("blur", () => this.resetControls());
+    window.addEventListener("pagehide", () => this.resetControls());
+    window.addEventListener("pageshow", () => this.resetControls());
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.resetControls();
     });
@@ -190,6 +189,7 @@ export class TouchControls {
 
   show(vehicle: VehicleId): void {
     if (!this.enabled) return;
+    this.resetControls();
     this.abilityBtn.textContent = VEHICLES[vehicle].abilityName;
     this.el.classList.add("active");
     this.syncOrientation();
@@ -361,6 +361,7 @@ export class TouchControls {
   }
 
   private onScreenOrientationChange = (): void => {
+    this.resetControls();
     this.neutralTilt = null;
     this.neutralGravity = null;
     this.tiltSteer = 0;
@@ -391,6 +392,15 @@ export class TouchControls {
     this.gasKnob.style.transform = "";
     this.steerKnob.style.transform = "";
     for (const active of this.el.querySelectorAll(".pressed")) active.classList.remove("pressed");
+    for (const [element, pointerId] of this.activePointers) {
+      try {
+        if (element.hasPointerCapture(pointerId)) element.releasePointerCapture(pointerId);
+      } catch {
+        // iPadOS võib lehe peitmisel pointeri juba brauseri poolel vabastada.
+      }
+    }
+    this.activePointers.clear();
+    for (const reset of this.resetFallbackTouches) reset();
   }
 
   private bindAxis(
@@ -399,12 +409,10 @@ export class TouchControls {
     axis: "x" | "y",
     onValue: (value: number) => void,
   ): void {
-    let pointerId: number | null = null;
-
-    const update = (event: PointerEvent): void => {
+    const update = (clientX: number, clientY: number): void => {
       const rect = zone.getBoundingClientRect();
       const center = axis === "x" ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
-      const coordinate = axis === "x" ? event.clientX : event.clientY;
+      const coordinate = axis === "x" ? clientX : clientY;
       const radius = (axis === "x" ? rect.width : rect.height) * 0.36;
       const value = Math.max(-1, Math.min(1, (coordinate - center) / radius));
       onValue(value);
@@ -414,21 +422,26 @@ export class TouchControls {
     };
 
     zone.onpointerdown = (event) => {
-      if (pointerId !== null || this.portrait) return;
+      if (this.activePointers.has(zone) || this.portrait) return;
       event.preventDefault();
-      pointerId = event.pointerId;
-      zone.setPointerCapture(pointerId);
+      this.lastPointerDown.set(zone, performance.now());
+      this.activePointers.set(zone, event.pointerId);
+      try {
+        zone.setPointerCapture(event.pointerId);
+      } catch {
+        // WebKit võib süsteemžesti järel capture'i tagasi lükata; telg töötab edasi.
+      }
       zone.classList.add("pressed");
-      update(event);
+      update(event.clientX, event.clientY);
     };
     zone.onpointermove = (event) => {
-      if (event.pointerId !== pointerId) return;
+      if (event.pointerId !== this.activePointers.get(zone)) return;
       event.preventDefault();
-      update(event);
+      update(event.clientX, event.clientY);
     };
     const release = (event: PointerEvent): void => {
-      if (event.pointerId !== pointerId) return;
-      pointerId = null;
+      if (event.pointerId !== this.activePointers.get(zone)) return;
+      this.activePointers.delete(zone);
       zone.classList.remove("pressed");
       knob.style.transform = "";
       onValue(0);
@@ -436,6 +449,44 @@ export class TouchControls {
     zone.onpointerup = release;
     zone.onpointercancel = release;
     zone.onlostpointercapture = release;
+
+    let touchId: number | null = null;
+    this.resetFallbackTouches.push(() => (touchId = null));
+    zone.addEventListener(
+      "touchstart",
+      (event) => {
+        if (performance.now() - (this.lastPointerDown.get(zone) ?? -Infinity) < 100) return;
+        if (touchId !== null || this.portrait) return;
+        const touch = event.changedTouches[0];
+        if (!touch) return;
+        event.preventDefault();
+        touchId = touch.identifier;
+        zone.classList.add("pressed");
+        update(touch.clientX, touch.clientY);
+      },
+      { passive: false },
+    );
+    zone.addEventListener(
+      "touchmove",
+      (event) => {
+        if (touchId === null) return;
+        const touch = [...event.changedTouches].find((candidate) => candidate.identifier === touchId);
+        if (!touch) return;
+        event.preventDefault();
+        update(touch.clientX, touch.clientY);
+      },
+      { passive: false },
+    );
+    const releaseTouch = (event: TouchEvent): void => {
+      if (touchId === null) return;
+      if (![...event.changedTouches].some((touch) => touch.identifier === touchId)) return;
+      touchId = null;
+      zone.classList.remove("pressed");
+      knob.style.transform = "";
+      onValue(0);
+    };
+    zone.addEventListener("touchend", releaseTouch, { passive: false });
+    zone.addEventListener("touchcancel", releaseTouch, { passive: false });
   }
 
   private holdButton(
@@ -454,12 +505,34 @@ export class TouchControls {
     };
     button.onpointerdown = (event) => {
       event.preventDefault();
-      button.setPointerCapture(event.pointerId);
+      this.lastPointerDown.set(button, performance.now());
+      this.activePointers.set(button, event.pointerId);
+      try {
+        button.setPointerCapture(event.pointerId);
+      } catch {
+        // Hoidmisolek ei sõltu capture'i õnnestumisest.
+      }
       set(true);
     };
-    button.onpointerup = () => set(false);
-    button.onpointercancel = () => set(false);
-    button.onlostpointercapture = () => set(false);
+    const release = (event: PointerEvent): void => {
+      if (event.pointerId !== this.activePointers.get(button)) return;
+      this.activePointers.delete(button);
+      set(false);
+    };
+    button.onpointerup = release;
+    button.onpointercancel = release;
+    button.onlostpointercapture = release;
+    button.addEventListener(
+      "touchstart",
+      (event) => {
+        if (performance.now() - (this.lastPointerDown.get(button) ?? -Infinity) < 100) return;
+        event.preventDefault();
+        set(true);
+      },
+      { passive: false },
+    );
+    button.addEventListener("touchend", () => set(false), { passive: false });
+    button.addEventListener("touchcancel", () => set(false), { passive: false });
     return button;
   }
 
@@ -469,16 +542,50 @@ export class TouchControls {
       { class: "touch-action touch-" + variant, type: "button" },
       label,
     ) as HTMLButtonElement;
-    button.onpointerdown = (event) => {
-      event.preventDefault();
-      if (this.portrait) return;
-      button.classList.add("pressed");
-      this.input.triggerTouchAction(action);
-    };
+    this.bindTap(button, () => this.input.triggerTouchAction(action));
     const release = (): void => button.classList.remove("pressed");
     button.onpointerup = release;
     button.onpointercancel = release;
     button.onpointerleave = release;
     return button;
+  }
+
+  /** Pointer on kiire põhitee; click/touch on iPadOS WebKiti varutee. */
+  private bindTap(button: HTMLButtonElement, activate: () => void): void {
+    let lastActivation = -Infinity;
+    const run = (): void => {
+      if (this.portrait) return;
+      const now = performance.now();
+      if (now - lastActivation < 250) return;
+      lastActivation = now;
+      button.classList.add("pressed");
+      activate();
+    };
+    button.onpointerdown = (event) => {
+      event.preventDefault();
+      this.lastPointerDown.set(button, performance.now());
+      run();
+    };
+    button.onclick = () => {
+      // Töötava Pointer Eventsi järel saabub sama žesti click. Pika vajutuse
+      // korral võib vahe olla üle tavalise debounce'i, kuid tegevus peab jääma ühekordseks.
+      if (performance.now() - lastActivation < 1000) return;
+      run();
+    };
+    const release = (): void => button.classList.remove("pressed");
+    button.onpointerup = release;
+    button.onpointercancel = release;
+    button.onpointerleave = release;
+    button.addEventListener(
+      "touchstart",
+      (event) => {
+        if (performance.now() - (this.lastPointerDown.get(button) ?? -Infinity) < 100) return;
+        event.preventDefault();
+        run();
+      },
+      { passive: false },
+    );
+    button.addEventListener("touchend", release, { passive: false });
+    button.addEventListener("touchcancel", release, { passive: false });
   }
 }

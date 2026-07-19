@@ -32,8 +32,8 @@ export class Input {
     });
   }
 
-  /** Kutsu üks kord kaadri lõpus */
-  endFrame(): void {
+  /** Kutsu pärast iga simulatsioonisammu, et hetkeline sisend loetaks täpselt ühe korra. */
+  endUpdate(): void {
     this.justPressed.clear();
     this.touchJustPressed.clear();
   }
