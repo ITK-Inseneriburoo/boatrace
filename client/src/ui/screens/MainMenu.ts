@@ -245,6 +245,7 @@ export class MainMenu implements Screen {
     // Sektsioon: eraldusjoon + sisu — hoiab seotud valikud visuaalselt koos
     const section = (...children: HTMLElement[]): HTMLElement =>
       h("div", { class: "menu-section" }, ...children);
+    const pwaInstall = new PwaInstall();
 
     this.el = h(
       "div",
@@ -260,6 +261,7 @@ export class MainMenu implements Screen {
         h(
           "div",
           { class: "panel menu-panel" },
+          pwaInstall.el,
           h("img", {
             class: "panel-brand",
             src: "/brand/logo-ITK-white.svg",
@@ -286,7 +288,6 @@ export class MainMenu implements Screen {
           section(
             h("div", { class: "row", style: "justify-content:center" }, soloBtn, this.mpButton, sprintBtn, randomBtn),
           ),
-          section(new PwaInstall().el),
           section(
             h(
               "div",

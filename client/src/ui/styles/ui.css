@@ -470,21 +470,50 @@ table.results tr.me td { color: var(--accent); font-weight: 700; }
 }
 /* ---------- Installitav mobiilimäng ---------- */
 .pwa-actions {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  z-index: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  width: 100%;
+  gap: 6px;
 }
 .pwa-actions[hidden] { display: none; }
+.pwa-action {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+}
+.pwa-action:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+}
+.pwa-icon {
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+}
 .pwa-hint {
-  flex-basis: 100%;
-  min-height: 1.2em;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(310px, calc(100vw - 40px));
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(10, 17, 24, 0.96);
   color: var(--text-dim);
   font-size: 0.82rem;
-  text-align: center;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
+.pwa-hint:empty { display: none; }
 
 /* ---------- Puutejuhtimine ---------- */
 .touch-controls {
@@ -693,6 +722,15 @@ table.results tr.me td { color: var(--accent); font-weight: 700; }
   button,
   .chip {
     min-height: 44px;
+  }
+  .pwa-actions {
+    top: 12px;
+    left: 14px;
+  }
+  .pwa-action {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
   }
   .swatch {
     width: 44px;
