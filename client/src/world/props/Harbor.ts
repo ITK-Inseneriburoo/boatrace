@@ -345,7 +345,8 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
       m = w;
     }
     fitToSize(m as THREE.Group, L, "z");
-    m.position.y -= 0.4;
+    // Lastis laev istub sügavamal: tume veealune põhjaosa jääb vee alla
+    m.position.y -= 2.8;
     g.clear();
     g.add(m);
 
