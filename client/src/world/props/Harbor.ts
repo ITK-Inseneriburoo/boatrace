@@ -400,7 +400,7 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
       if (!tex) return;
       const box = hullBox;
       const halfW = (box.max.x - box.min.x) / 2;
-      const logoY = box.min.y + (box.max.y - box.min.y) * 0.68;
+      const logoY = box.min.y + (box.max.y - box.min.y) * 0.62;
       // Keskkere kohal (kere kõige laiem koht) — nihkega paneel ulatuks
       // kitseneva ahtri/vööri juures kerest välja ja paistaks hõljuvana
       for (const s of [-1, 1]) {
