@@ -245,9 +245,25 @@ export class TrackWorld {
       const scale = o.scale ?? 1;
       const x = p.x + nx * o.offset;
       const z = p.z + nz * o.offset;
-      const r = o.kind === "kivi" ? 1.6 * scale : 2.6 * scale;
-      this.colliders.circles.push({ x, z, r });
-      return { kind: o.kind, x, z, scale, rot: rnd() * Math.PI * 2, r };
+      const rot = rnd() * Math.PI * 2;
+      const r = o.kind === "kivi" ? 1.6 * scale : 0.38 * scale;
+      if (o.kind === "kivi") {
+        this.colliders.circles.push({ x, z, r });
+      } else {
+        // Palk on 6 m pikk silinder piki lokaalset X-telge. Kapsli
+        // kesklõik lõpeb raadiuse võrra enne visuaalse palgi otsi.
+        const halfSegment = (3 - 0.38) * scale;
+        const dx = Math.cos(rot) * halfSegment;
+        const dz = -Math.sin(rot) * halfSegment;
+        this.colliders.segments.push({
+          ax: x - dx,
+          az: z - dz,
+          bx: x + dx,
+          bz: z + dz,
+          r,
+        });
+      }
+      return { kind: o.kind, x, z, scale, rot, r };
     });
     this.group.add(buildObstacleMeshes(placed, def.seed));
 

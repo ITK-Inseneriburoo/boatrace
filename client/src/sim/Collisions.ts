@@ -57,8 +57,24 @@ function closestOnSegment(px: number, pz: number, ax: number, az: number, bx: nu
 }
 
 function closestSegmentPoints(a: Capsule, s: SegmentCollider): [number, number, number, number] {
-  // XZ 2D segment distance. Check endpoints both ways; good enough for short
-  // static colliders and avoids solving the full degenerate segment system.
+  // Ristuvate keskjoonte kaugus on null. Ainult otste projektsioone kontrollides
+  // jääks keskel risti paiknevate kapslite kokkupõrge muidu tuvastamata.
+  const adx = a.bx - a.ax, adz = a.bz - a.az;
+  const sdx = s.bx - s.ax, sdz = s.bz - s.az;
+  const den = adx * sdz - adz * sdx;
+  if (Math.abs(den) > 1e-8) {
+    const rx = s.ax - a.ax, rz = s.az - a.az;
+    const t = (rx * sdz - rz * sdx) / den;
+    const u = (rx * adz - rz * adx) / den;
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+      const x = a.ax + adx * t;
+      const z = a.az + adz * t;
+      return [x, z, x, z];
+    }
+  }
+
+  // Mittekattuvate 2D lõikude lähimad punktid sisaldavad vähemalt ühe
+  // lõigu otspunkti, seega piisab otste projektsioonidest mõlemas suunas.
   const candidates: [number, number, number, number, number][] = [];
   for (const [px, pz] of [[a.ax, a.az], [a.bx, a.bz]] as [number, number][]) {
     const [cx, cz] = closestOnSegment(px, pz, s.ax, s.az, s.bx, s.bz);
