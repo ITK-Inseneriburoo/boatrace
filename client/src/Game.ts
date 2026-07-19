@@ -536,6 +536,7 @@ export class Game {
         dnf: r.dnf,
       }));
       this.results.setResults(rows);
+      this.boat?.freezeVisual();
       this.state = "results";
       this.hud.hide();
       this.touch.hide();
@@ -786,6 +787,7 @@ export class Game {
 
   private setPaused(on: boolean): void {
     this.paused = on;
+    if (on && this.mode === "solo") this.boat?.freezeVisual();
     this.hud.setPaused(on, this.mode === "mp" ? t("paus.lahku") : t("paus.katkesta"));
     this.touch.setPaused(on);
   }
@@ -830,6 +832,7 @@ export class Game {
 
   private showSoloResults(): void {
     if (!this.race || !this.choices) return;
+    this.boat?.freezeVisual();
     this.state = "results";
     this.hud.hide();
     this.touch.hide();
@@ -1041,9 +1044,9 @@ export class Game {
       this.spectatorCam.update(this.input, targets, frameDt);
       this.sky.followTarget(this.engine.camera.position);
     } else if (this.boat) {
-      // Pausil sim ei astu, aga alpha tiksub edasi — interpoleerimine kahe
-      // viimase (erineva) kaadri vahel paneks paadi tõmblema. Külmuta.
-      const frozen = this.paused && this.mode === "solo";
+      // Kui kohalik füüsika ei astu, tiksub Engine'i alpha siiski edasi.
+      // Kasuta lukustatud hetkepoosi nii pausil kui tulemuste ekraanil.
+      const frozen = this.state === "results" || (this.paused && this.mode === "solo");
       this.boat.applyVisual(frozen ? 1 : alpha);
       this.chaseCam.update(this.boat.physics, this.weather.waves, time, frameDt);
       this.sky.followTarget(this.boat.physics.pos);

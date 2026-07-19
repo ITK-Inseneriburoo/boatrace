@@ -31,6 +31,12 @@ export class PlayerBoat {
     this.prevRoll = this.physics.roll;
   }
 
+  /** Lukusta mõlemad interpolatsioonipoosid füüsika hetkeseisu. */
+  freezeVisual(): void {
+    this.snapshot();
+    this.applyVisual(1);
+  }
+
   update(input: BoatInput, waves: WaveSet, time: number, dt: number): void {
     this.snapshot();
     this.physics.step(input, waves, time, dt);
