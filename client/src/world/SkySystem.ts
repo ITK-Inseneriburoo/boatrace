@@ -4,6 +4,7 @@ import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import type { WeatherPreset } from "./WeatherPresets";
 import type { Engine } from "../core/Engine";
 import { getTextureRes } from "../core/Textures";
+import { trackAsset } from "../core/AssetLoading";
 
 const rgbeLoader = new RGBELoader();
 const hdriCache = new Map<string, Promise<THREE.DataTexture | null>>();
@@ -14,14 +15,14 @@ function loadHdri(base: string): Promise<THREE.DataTexture | null> {
   const key = `${base}@${res}`;
   let p = hdriCache.get(key);
   if (!p) {
-    p = rgbeLoader
+    p = trackAsset(rgbeLoader
       .loadAsync(`${base}_${res}.hdr`)
       .catch(() => (res === "2k" ? rgbeLoader.loadAsync(`${base}_1k.hdr`) : Promise.reject()))
       .then((tex) => {
         tex.mapping = THREE.EquirectangularReflectionMapping;
         return tex;
       })
-      .catch(() => null);
+      .catch(() => null));
     hdriCache.set(key, p);
   }
   return p;
@@ -80,8 +81,9 @@ export class SkySystem {
 
   /** Kaitseb hilinenud HDRI-laadimise eest pärast preseti vahetust */
   private presetToken = 0;
+  private presetReady: Promise<void> = Promise.resolve();
 
-  applyPreset(p: WeatherPreset): void {
+  applyPreset(p: WeatherPreset): Promise<void> {
     this.preset = p;
     const token = ++this.presetToken;
     // Alati kõigepealt protseduuriline taevas (HDRI on async täiendus)
@@ -112,11 +114,18 @@ export class SkySystem {
     this.lightningTimer = 4 + Math.random() * 8;
 
     if (p.hdri) {
-      void loadHdri(p.hdri).then((tex) => {
+      this.presetReady = loadHdri(p.hdri).then((tex) => {
         if (!tex || token !== this.presetToken) return;
         this.applyHdri(p, tex);
       });
+    } else {
+      this.presetReady = Promise.resolve();
     }
+    return this.presetReady;
+  }
+
+  whenReady(): Promise<void> {
+    return this.presetReady;
   }
 
   /** Vaheta protseduuriline taevas laetud HDRI vastu (taust + IBL + ookeanikuubik) */

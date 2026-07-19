@@ -28,9 +28,10 @@ const VEHICLE_MODELS: Partial<Record<VehicleId, { file: string; rotY: number; dr
  * enne sõidu algust, nii et spawnimisel toimub GLB-vahetus samas kaadris ja
  * mängija ei näe protseduurilist vahevarianti.
  */
-export function preloadVehicleModels(renderer?: THREE.WebGLRenderer): void {
+export async function preloadVehicleModels(renderer?: THREE.WebGLRenderer): Promise<void> {
+  const tasks: Promise<void>[] = [];
   for (const cfg of Object.values(VEHICLE_MODELS)) {
-    void loadModel(cfg.file, false).then((m) => {
+    tasks.push(loadModel(cfg.file, false).then((m) => {
       if (!m || !renderer) return;
       m.traverse((o) => {
         if (o instanceof THREE.Mesh) {
@@ -43,8 +44,9 @@ export function preloadVehicleModels(renderer?: THREE.WebGLRenderer): void {
           }
         }
       });
-    });
+    }));
   }
+  await Promise.all(tasks);
 }
 
 /** Kere põhivärvid sõidukite kaupa */

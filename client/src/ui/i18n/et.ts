@@ -1,5 +1,7 @@
 /** Kõik UI stringid ühes kohas — teise keele lisamine = üks uus fail */
 const et = {
+  "boot.laadimine": "Laadin mängu…",
+  "boot.viga": "Mängu laadimine ebaõnnestus. Värskenda lehte ja proovi uuesti.",
   "menu.nimi": "Sinu nimi",
   "menu.nimi.placeholder": "Sisesta nimi…",
   "menu.varv": "Paadi värv",

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { loadPbrSet } from "./Textures";
+import { trackAsset } from "./AssetLoading";
 
 /**
  * Valikuliste glTF-mudelite laadija (Kenney kit, Sketchfab CC-BY sõidukid jm —
@@ -22,7 +23,7 @@ export function loadModel(name: string, matte = true): Promise<THREE.Group | nul
   const key = `${name}|${matte}`;
   let p = cache.get(key);
   if (!p) {
-    p = loader
+    p = trackAsset(loader
       .loadAsync(`/models/${name}.glb`)
       .then((gltf) => {
         const g = gltf.scene;
@@ -56,13 +57,13 @@ export function loadModel(name: string, matte = true): Promise<THREE.Group | nul
         // 404 on ootuspärane (progressiivne täiustus); parse-viga tasub näha
         console.warn(`loadModel: ${name} jäi protseduuriliseks:`, err?.message ?? err);
         return null;
-      });
+      }));
     cache.set(key, p);
   }
   // Iga kasutaja saab oma klooni. NB: clone(true) jagab materjale —
   // kloonime ka need, muidu ühe paadi läbipaistvaks tegemine (kummitus,
   // pealtvaataja) muudab KÕIK sama GLB-ga paadid läbipaistvaks.
-  return p.then((g) => {
+  return trackAsset(p.then((g) => {
     if (!g) return null;
     const c = g.clone(true) as THREE.Group;
     c.traverse((o) => {
@@ -73,7 +74,7 @@ export function loadModel(name: string, matte = true): Promise<THREE.Group | nul
       }
     });
     return c;
-  });
+  }));
 }
 
 /**
@@ -82,14 +83,23 @@ export function loadModel(name: string, matte = true): Promise<THREE.Group | nul
  * Kõik laadijad cache'ivad, nii et rajaehitus saab hiljem samad promise'id.
  * NB: matte-lipp peab klappima kasutuskoha omaga (cache-võti sisaldab seda).
  */
-export function preloadWorldAssets(renderer?: THREE.WebGLRenderer): void {
-  for (const base of ["/textures/terrain/sand", "/textures/terrain/grass", "/textures/terrain/rock"]) {
-    void loadPbrSet(base).then((set) => {
+export async function preloadWorldAssets(renderer?: THREE.WebGLRenderer): Promise<void> {
+  const tasks: Promise<void>[] = [];
+  for (const base of [
+    "/textures/terrain/sand",
+    "/textures/terrain/grass",
+    "/textures/terrain/rock",
+    "/textures/harbor/planks",
+    "/textures/harbor/concrete",
+    "/textures/harbor/metal",
+    "/textures/harbor/rust",
+  ]) {
+    tasks.push(loadPbrSet(base).then((set) => {
       if (!set || !renderer) return;
       for (const t of [set.color, set.normal, set.rough, set.ao]) {
         if (t) renderer.initTexture(t);
       }
-    });
+    }));
   }
   const models: [string, boolean][] = [
     ["gate-finish", true],
@@ -99,7 +109,7 @@ export function preloadWorldAssets(renderer?: THREE.WebGLRenderer): void {
     ["ship-cargo-a", true],
   ];
   for (const [name, matte] of models) {
-    void loadModel(name, matte).then((m) => {
+    tasks.push(loadModel(name, matte).then((m) => {
       if (!m || !renderer) return;
       m.traverse((o) => {
         if (o instanceof THREE.Mesh) {
@@ -112,8 +122,9 @@ export function preloadWorldAssets(renderer?: THREE.WebGLRenderer): void {
           }
         }
       });
-    });
+    }));
   }
+  await Promise.all(tasks);
 }
 
 /**

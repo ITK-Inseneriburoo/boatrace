@@ -42,6 +42,7 @@ import { setCurrentEnvIntensity, applyEnvIntensityTo } from "./world/env";
 import { PlanarReflection } from "./world/PlanarReflection";
 import { preloadVehicleModels } from "./boats/BoatFactory";
 import { preloadWorldAssets } from "./core/Assets";
+import { waitForAssetLoads } from "./core/AssetLoading";
 
 type GameState = "menu" | "lobby" | "room" | "countdown" | "racing" | "results";
 
@@ -109,6 +110,8 @@ export class Game {
   private effectiveGraphics: GraphicsLevel = "korge";
   private lowFpsTime = 0;
   private planar: PlanarReflection | null = null;
+  private readonly vehicleAssetsReady: Promise<void>;
+  private worldAssetsReady: Promise<void> = Promise.resolve();
 
   // --- Efektid ---
   private effects = new Effects();
@@ -145,7 +148,7 @@ export class Game {
     this.engine = new Engine(canvas);
     // Sõidukimudelid sooja: menüü ajal parsitakse GLB-d ja tekstuurid GPU-le.
     // Maailma varad soojendab applyGraphics (vajab õiget tekstuuriresolutsiooni)
-    preloadVehicleModels(this.engine.renderer);
+    this.vehicleAssetsReady = preloadVehicleModels(this.engine.renderer);
     this.sky = new SkySystem(this.engine);
     this.engine.scene.add(this.ocean.group);
     this.chaseCam = new ChaseCamera(this.engine.camera);
@@ -250,6 +253,28 @@ export class Game {
 
     this.engine.onUpdate = (dt) => this.update(dt);
     this.engine.onRender = (alpha, frameDt) => this.render(alpha, frameDt);
+  }
+
+  /**
+   * Lõpeta külmkäivitus laadimiskatte taga: oota välised varad, tõsta
+   * tekstuurid GPU-le, kompileeri stseeni shaderid ja soojenda post-pipeline.
+   */
+  async start(): Promise<void> {
+    await Promise.all([
+      this.vehicleAssetsReady,
+      this.worldAssetsReady,
+      this.ocean.ready,
+      this.sky.whenReady(),
+    ]);
+    await waitForAssetLoads();
+
+    // Assetide paigaldavad jätkud saavad stseeni enne kompileerimist lõpuni muuta.
+    // Ka brauser saab laadimiskatte ühe korra ära joonistada.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await this.engine.renderer.compileAsync(this.engine.scene, this.engine.camera);
+    this.engine.pipeline.render(0);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
     this.engine.start();
   }
 
@@ -311,7 +336,7 @@ export class Game {
       this.engine.renderer.capabilities.getMaxAnisotropy(),
     );
     // Soojenda maailma varad valitud resolutsioonis (cache'itud, idempotentne)
-    preloadWorldAssets(this.engine.renderer);
+    this.worldAssetsReady = preloadWorldAssets(this.engine.renderer);
     this.track?.terrain.setDetailNormals(tier.terrainNormals);
     this.track?.setSceneryDetail(tier.particleScale);
     this.ocean.applyTier({ foamTex: tier.ocean.foamTex, shoreAlpha: tier.ocean.shoreAlpha });

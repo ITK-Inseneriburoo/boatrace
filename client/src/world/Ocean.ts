@@ -65,6 +65,7 @@ export interface OceanTierCfg {
 export class Ocean {
   readonly group = new THREE.Group();
   readonly material: THREE.ShaderMaterial;
+  readonly ready: Promise<void>;
   private nearMesh: THREE.Mesh;
   private cellSize = NEAR_SIZE / NEAR_SEGS;
   private foamTex: THREE.Texture | null = null;
@@ -118,7 +119,7 @@ export class Ocean {
     this.group.add(this.nearMesh);
 
     // Vahutekstuur (valikuline — 404 korral jääb ühtlane vahuvärv)
-    void loadTexture("/textures/water/foam_1k_color.webp", true).then((tex) => {
+    this.ready = loadTexture("/textures/water/foam_1k_color.webp", true).then((tex) => {
       if (!tex) return;
       this.foamTex = tex;
       this.material.uniforms.uFoamTex.value = tex;

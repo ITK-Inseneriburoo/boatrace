@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { trackAsset } from "./AssetLoading";
 
 /**
  * PBR-tekstuurisettide laadija. Ainus koht, kus bitmap-tekstuure laaditakse —
@@ -47,10 +48,10 @@ function setup(t: THREE.Texture, srgb: boolean): THREE.Texture {
 }
 
 function tryLoad(url: string, srgb: boolean): Promise<THREE.Texture | null> {
-  return loader
+  return trackAsset(loader
     .loadAsync(url)
     .then((t) => setup(t, srgb))
-    .catch(() => null);
+    .catch(() => null));
 }
 
 /**
@@ -62,7 +63,7 @@ export function loadPbrSet(base: string): Promise<PbrSet | null> {
   const key = `${base}@${texRes}`;
   let p = cache.get(key);
   if (!p) {
-    p = (async () => {
+    p = trackAsset((async () => {
       let res: "1k" | "2k" = texRes;
       let color = await tryLoad(`${base}_${res}_color.webp`, true);
       if (!color && res === "2k") {
@@ -76,7 +77,7 @@ export function loadPbrSet(base: string): Promise<PbrSet | null> {
         tryLoad(`${base}_${res}_ao.webp`, false),
       ]);
       return { color, normal, rough, ao };
-    })();
+    })());
     cache.set(key, p);
   }
   return p;

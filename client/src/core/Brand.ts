@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { trackAsset } from "./AssetLoading";
 
 /**
  * ITK Inseneribüroo bränding: SVG-logod tekstuuridena (lipud, bännerid,
@@ -11,12 +12,12 @@ const imgCache = new Map<string, Promise<HTMLImageElement | null>>();
 function loadImage(url: string): Promise<HTMLImageElement | null> {
   let p = imgCache.get(url);
   if (!p) {
-    p = new Promise((resolve) => {
+    p = trackAsset(new Promise((resolve) => {
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = url;
-    });
+    }));
     imgCache.set(url, p);
   }
   return p;
