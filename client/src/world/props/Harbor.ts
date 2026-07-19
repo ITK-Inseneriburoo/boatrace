@@ -326,8 +326,10 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
   }
   const a = new THREE.Vector3(0, 0, -L / 2 - 2).applyMatrix4(world);
   const b = new THREE.Vector3(0, 0, L / 2 + 5).applyMatrix4(world);
-  // NB: Kenney laev on jässakam (laius ~37% pikkusest) — raadius selle järgi
-  colliders.segments.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, r: Math.max(W / 2 + 0.6, L * 0.19) });
+  // NB: Kenney laev on jässakam (laius ~37% pikkusest) — raadius selle järgi.
+  // Kui päris mudel laadub, mõõdetakse kapsel allpool tema mõõtude järgi üle.
+  const seg = { ax: a.x, az: a.z, bx: b.x, bz: b.z, r: Math.max(W / 2 + 0.6, L * 0.19) };
+  colliders.segments.push(seg);
 
   // Realistlik kaubalaev (Sketchfab, meshopt), varuks Kenney oma + ITK logo külgedel
   void loadModel("props/cargo-ship", false)
@@ -346,42 +348,56 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
     m.position.y -= 0.4;
     g.clear();
     g.add(m);
+
+    // Kast otse geomeetriast laevagrupi LOKAALSES ruumis: inv·matrixWorld
+    // taandab grupi pöörde täpselt välja. Maailmaruumi bbox kaudu käies
+    // paisuks kast pööratud laeval kaks korda (logod hõljusid õhus).
+    g.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(g.matrixWorld).invert();
+    const localBox = (o: THREE.Object3D): THREE.Box3 => {
+      const box = new THREE.Box3();
+      const rel = new THREE.Matrix4();
+      o.traverse((c) => {
+        if (!(c instanceof THREE.Mesh)) return;
+        const geo = c.geometry as THREE.BufferGeometry;
+        if (!geo.boundingBox) geo.computeBoundingBox();
+        rel.copy(inv).multiply(c.matrixWorld);
+        box.union(geo.boundingBox!.clone().applyMatrix4(rel));
+      });
+      return box;
+    };
+    // Kere = suurima põhjapindalaga mesh (kraanad/mastid on kerest laiemad)
+    const fullBox = localBox(m);
+    let hullBox = fullBox;
+    let bestArea = 0;
+    m.traverse((o) => {
+      if (o instanceof THREE.Mesh) {
+        const bx = localBox(o);
+        const area = (bx.max.x - bx.min.x) * (bx.max.z - bx.min.z);
+        if (area > bestArea) {
+          bestArea = area;
+          hullBox = bx;
+        }
+      }
+    });
+
+    // Kollisioonikapsel päris kere järgi: Kenney-varu jaoks pandud lai
+    // raadius (L*0.19) põrgatas saleda Sketchfabi laeva juures liiga vara
+    const r = (hullBox.max.x - hullBox.min.x) / 2 + 0.5;
+    const zMid = (fullBox.min.z + fullBox.max.z) / 2;
+    const za = Math.min(fullBox.min.z + r, zMid);
+    const zb = Math.max(fullBox.max.z - r, zMid);
+    const wa = new THREE.Vector3(0, 0, za).applyMatrix4(g.matrixWorld);
+    const wb = new THREE.Vector3(0, 0, zb).applyMatrix4(g.matrixWorld);
+    seg.ax = wa.x;
+    seg.az = wa.z;
+    seg.bx = wb.x;
+    seg.bz = wb.z;
+    seg.r = r;
+
     void shipLogoTexture().then((tex) => {
       if (!tex) return;
-      // Laius KERE järgi, mitte kogu mudeli bbox'ist — kraanad/mastid on
-      // kerest laiemad ja logo jäi muidu õhku hõljuma. Kere = suurima
-      // põhjapindalaga mesh. NB: bbox peab olema laevagrupi LOKAALSES
-      // ruumis — maailmaruumi bbox pöördunud+nihutatud laeval paiskas
-      // logod sadade meetrite kaugusele maastikule hõljuma.
-      g.updateMatrixWorld(true);
-      const inv = new THREE.Matrix4().copy(g.matrixWorld).invert();
-      // Kast otse geomeetriast lokaalses ruumis: inv·matrixWorld taandab
-      // grupi pöörde täpselt välja. Maailma-AABB kaudu käies paisuks kast
-      // pööratud laeval kaks korda ja logod hõljuksid kere kõrval õhus.
-      const localBox = (o: THREE.Object3D): THREE.Box3 => {
-        const box = new THREE.Box3();
-        const rel = new THREE.Matrix4();
-        o.traverse((c) => {
-          if (!(c instanceof THREE.Mesh)) return;
-          const geo = c.geometry as THREE.BufferGeometry;
-          if (!geo.boundingBox) geo.computeBoundingBox();
-          rel.copy(inv).multiply(c.matrixWorld);
-          box.union(geo.boundingBox!.clone().applyMatrix4(rel));
-        });
-        return box;
-      };
-      let box = localBox(m);
-      let bestArea = 0;
-      m.traverse((o) => {
-        if (o instanceof THREE.Mesh) {
-          const b = localBox(o);
-          const area = (b.max.x - b.min.x) * (b.max.z - b.min.z);
-          if (area > bestArea) {
-            bestArea = area;
-            box = b;
-          }
-        }
-      });
+      const box = hullBox;
       const halfW = (box.max.x - box.min.x) / 2;
       const logoY = box.min.y + (box.max.y - box.min.y) * 0.55;
       // Keskkere kohal (kere kõige laiem koht) — nihkega paneel ulatuks
