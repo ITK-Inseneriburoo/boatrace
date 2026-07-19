@@ -84,10 +84,15 @@ export class MainMenu implements Screen {
     const cardEls: HTMLElement[] = [];
     for (const id of VEHICLE_IDS) {
       const v = VEHICLES[id];
-      const bar = (val: number): HTMLElement => {
+      const stat = (label: string, val: number): HTMLElement => {
         const fill = h("div");
         fill.style.width = `${Math.round(val * 100)}%`;
-        return h("div", { class: "statbar" }, fill);
+        return h(
+          "div",
+          { class: "statrow" },
+          h("span", { class: "statlabel" }, label),
+          h("div", { class: "statbar" }, fill),
+        );
       };
       const card = h(
         "div",
@@ -95,7 +100,13 @@ export class MainMenu implements Screen {
         h("div", { class: "vname" }, v.nimi),
         h("div", { class: "vability" }, `Shift: ${v.abilityName}`),
         h("div", { class: "vdesc" }, v.kirjeldus),
-        h("div", { class: "vstats" }, bar(v.topSpeed / 35), bar(v.accel / 11), bar(v.grip)),
+        h(
+          "div",
+          { class: "vstats" },
+          stat(t("menu.stat.kiirus"), v.topSpeed / 35),
+          stat(t("menu.stat.kiirendus"), v.accel / 11),
+          stat(t("menu.stat.haarduvus"), v.grip),
+        ),
       );
       card.dataset.vehicle = id;
       if (id === this.choices.vehicle) card.classList.add("selected");
@@ -224,46 +235,61 @@ export class MainMenu implements Screen {
       this.onWeather(this.choices.weather);
     };
 
+    // Sektsioon: eraldusjoon + sisu — hoiab seotud valikud visuaalselt koos
+    const section = (...children: HTMLElement[]): HTMLElement =>
+      h("div", { class: "menu-section" }, ...children);
+
     this.el = h(
       "div",
       {},
       h(
         "div",
         { class: "center-wrap" },
-        h(
-          "div",
-          { class: "row", style: "gap:18px;align-items:center" },
-          h("img", { src: "/brand/logo-ITK-white.svg", alt: "ITK", style: "height:56px" }),
-          h("h1", { class: "title" }, t("menu.title")),
-        ),
+        h("h1", { class: "title" }, t("menu.title")),
         h("p", { class: "subtitle" }, t("menu.subtitle")),
         h(
           "div",
-          { class: "panel center-wrap", style: "gap:16px" },
-          h("div", { class: "field", style: "width:280px" }, h("label", {}, t("menu.nimi")), this.nameInput),
-            h("div", { class: "field" }, h("label", {}, t("menu.varv")), swatches),
-            h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles),
+          { class: "panel menu-panel" },
+          section(
+            h(
+              "div",
+              { class: "row", style: "gap:26px;align-items:flex-start" },
+              h("div", { class: "field", style: "width:220px" }, h("label", {}, t("menu.nimi")), this.nameInput),
+              h("div", { class: "field" }, h("label", {}, t("menu.varv")), swatches),
+            ),
+          ),
+          section(h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles)),
+          section(
             h("div", { class: "field" }, h("label", {}, t("menu.rada")), tracks),
             h(
               "div",
               { class: "row", style: "gap:26px" },
               h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
               h("div", { class: "field" }, h("label", {}, t("menu.ringe")), laps),
-              h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
             ),
-          h("div", { class: "row", style: "margin-top:8px" }, soloBtn, this.mpButton, sprintBtn, randomBtn),
-          (() => {
-            const details = h("details", { style: "width:100%;color:var(--text)" });
-            const summary = h(
-              "summary",
-              { style: "cursor:pointer;color:var(--text-dim);font-size:.85rem" },
-              t("menu.juhtimine"),
-            );
-            details.appendChild(summary);
-            const inner = h("div", { style: "margin-top:10px" }, buildLegend());
-            details.appendChild(inner);
-            return details;
-          })(),
+          ),
+          section(
+            h("div", { class: "row", style: "justify-content:center" }, soloBtn, this.mpButton, sprintBtn, randomBtn),
+          ),
+          section(
+            h(
+              "div",
+              { class: "row", style: "gap:26px;justify-content:space-between;width:100%" },
+              h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
+              (() => {
+                const details = h("details", { style: "color:var(--text)" });
+                const summary = h(
+                  "summary",
+                  { style: "cursor:pointer;color:var(--text-dim);font-size:.85rem" },
+                  t("menu.juhtimine"),
+                );
+                details.appendChild(summary);
+                const inner = h("div", { style: "margin-top:10px" }, buildLegend());
+                details.appendChild(inner);
+                return details;
+              })(),
+            ),
+          ),
         ),
       ),
     );

@@ -93,6 +93,7 @@ export class Hud {
     this.el = h(
       "div",
       { id: "hud" },
+      h("img", { id: "brand-badge", src: "/brand/logo-ITK-white.svg", alt: "ITK Inseneribüroo" }),
       this.legendEl,
       this.pauseEl,
       h(

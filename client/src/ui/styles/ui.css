@@ -158,8 +158,30 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
 }
 .swatch.selected { border-color: #fff; }
 
+.menu-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 980px;
+}
+.menu-section .row { justify-content: center; }
+.menu-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+}
+.menu-section + .menu-section {
+  border-top: 1px solid var(--panel-border);
+}
+.menu-section:first-child { padding-top: 0; }
+.menu-section:last-child { padding-bottom: 0; }
+.menu-section > .field { align-items: center; }
+
 .vehicle-card {
-  width: 150px;
+  width: 168px;
   padding: 12px;
   border-radius: 12px;
   border: 1px solid var(--panel-border);
@@ -185,18 +207,44 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
   min-height: 2.6em;
 }
 .vehicle-card .vstats {
-  margin-top: 6px;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+}
+.statrow {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 6px;
+  align-items: center;
+}
+.statlabel {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 .statbar {
-  height: 4px;
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
 }
 .statbar > div { height: 100%; background: var(--accent); }
+
+/* ---------- Bränd ---------- */
+#brand-badge {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 30px;
+  opacity: 0.8;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
 
 /* ---------- HUD ---------- */
 #hud { pointer-events: none; }
