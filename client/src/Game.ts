@@ -867,17 +867,6 @@ export class Game {
         this.finishTimer -= dt;
         if (this.finishTimer <= 0) this.showSoloResults();
       }
-    } else if (this.state === "results" && this.boat) {
-      // Tulemuste ekraani taga jääb paat lainetel õõtsuma. Ilma füüsika
-      // astumiseta interpoleeriks render kahe viimase (erineva) kaadri
-      // vahel edasi-tagasi — paat tõmbleks HUD-i all.
-      this.boat.update(
-        { throttle: 0, steer: 0, slide: false },
-        this.weather.waves,
-        this.engine.simTime,
-        dt,
-      );
-      resolveCollisions(this.boat.physics, this.track.colliders, this.track.terrain);
     }
     if (this.state === "racing") this.updateWaterShots(dt);
   }
