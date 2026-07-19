@@ -350,29 +350,48 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
       if (!tex) return;
       // Laius KERE järgi, mitte kogu mudeli bbox'ist — kraanad/mastid on
       // kerest laiemad ja logo jäi muidu õhku hõljuma. Kere = suurima
-      // põhjapindalaga mesh.
-      let hullMesh: THREE.Object3D = m;
+      // põhjapindalaga mesh. NB: bbox peab olema laevagrupi LOKAALSES
+      // ruumis — maailmaruumi bbox pöördunud+nihutatud laeval paiskas
+      // logod sadade meetrite kaugusele maastikule hõljuma.
+      g.updateMatrixWorld(true);
+      const inv = new THREE.Matrix4().copy(g.matrixWorld).invert();
+      // Kast otse geomeetriast lokaalses ruumis: inv·matrixWorld taandab
+      // grupi pöörde täpselt välja. Maailma-AABB kaudu käies paisuks kast
+      // pööratud laeval kaks korda ja logod hõljuksid kere kõrval õhus.
+      const localBox = (o: THREE.Object3D): THREE.Box3 => {
+        const box = new THREE.Box3();
+        const rel = new THREE.Matrix4();
+        o.traverse((c) => {
+          if (!(c instanceof THREE.Mesh)) return;
+          const geo = c.geometry as THREE.BufferGeometry;
+          if (!geo.boundingBox) geo.computeBoundingBox();
+          rel.copy(inv).multiply(c.matrixWorld);
+          box.union(geo.boundingBox!.clone().applyMatrix4(rel));
+        });
+        return box;
+      };
+      let box = localBox(m);
       let bestArea = 0;
-      m.updateMatrixWorld(true);
       m.traverse((o) => {
         if (o instanceof THREE.Mesh) {
-          const b = new THREE.Box3().setFromObject(o);
+          const b = localBox(o);
           const area = (b.max.x - b.min.x) * (b.max.z - b.min.z);
           if (area > bestArea) {
             bestArea = area;
-            hullMesh = o;
+            box = b;
           }
         }
       });
-      const box = new THREE.Box3().setFromObject(hullMesh);
       const halfW = (box.max.x - box.min.x) / 2;
       const logoY = box.min.y + (box.max.y - box.min.y) * 0.55;
+      // Keskkere kohal (kere kõige laiem koht) — nihkega paneel ulatuks
+      // kitseneva ahtri/vööri juures kerest välja ja paistaks hõljuvana
       for (const s of [-1, 1]) {
         const logo = new THREE.Mesh(
-          new THREE.PlaneGeometry(L * 0.22, L * 0.11),
+          new THREE.PlaneGeometry(L * 0.16, L * 0.08),
           new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.6 }),
         );
-        logo.position.set(s * (halfW * 0.88), logoY, (box.min.z + box.max.z) / 2 + L * 0.06);
+        logo.position.set(s * (halfW + 0.06), logoY, (box.min.z + box.max.z) / 2);
         logo.rotation.y = (s * Math.PI) / 2;
         g.add(logo);
       }
