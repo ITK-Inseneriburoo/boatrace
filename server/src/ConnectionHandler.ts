@@ -72,6 +72,9 @@ export class ConnectionHandler {
       player = this.sessions.tryReconnect(msg.sessionToken, socket);
     }
     if (player) {
+      player.name = msg.name;
+      player.color = msg.color;
+
       // Taastatud sessioon: saada täisolek
       player.send({
         type: "welcome",

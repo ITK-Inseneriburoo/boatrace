@@ -102,7 +102,12 @@ export class RoomScreen implements Screen {
         { class: "center-wrap" },
         h(
           "div",
-          { class: "panel center-wrap", style: "gap:14px;min-width:640px" },
+          { class: "panel room-panel center-wrap", style: "gap:14px;min-width:640px" },
+          h("img", {
+            class: "panel-brand",
+            src: "/brand/logo-ITK-white.svg",
+            alt: "ITK Inseneribüroo",
+          }),
           this.titleEl,
           this.roomMetaEl,
           this.noticeEl,

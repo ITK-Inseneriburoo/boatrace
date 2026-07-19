@@ -167,6 +167,7 @@ input[type="text"]:focus { border-color: var(--accent-dim); }
   /* Vari ainult allapoole, mitte uduna ümber paneeli */
   box-shadow: 0 22px 40px -16px rgba(0, 0, 0, 0.55);
 }
+.room-panel { position: relative; }
 .menu-section .row { justify-content: center; }
 .menu-section {
   width: 100%;
