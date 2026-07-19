@@ -83,12 +83,14 @@ export class TrackWorld {
     const start: BuoyInstance[] = [];
     const rnd = mulberry32(def.seed + 1);
 
-    const gateDefs = [{ t: 0, width: def.routeWidth + 4 }, ...def.gates];
+    const gateDefs = [{ t: 0, offset: 0, width: def.routeWidth + 4 }, ...def.gates];
     gateDefs.forEach((gd, index) => {
-      const p = this.curve.getPointAt(gd.t);
+      const center = this.curve.getPointAt(gd.t);
       const tangent = this.curve.getTangentAt(gd.t).normalize();
       // Sõidusuunas vasakule: (+dirZ, -dirX); paremale: (-dirZ, +dirX)
       const nx = tangent.z, nz = -tangent.x;
+      const offset = gd.offset ?? 0;
+      const p = center.clone().add(new THREE.Vector3(nx * offset, 0, nz * offset));
       const w = gd.width ?? 22;
       const left = new THREE.Vector2(p.x + nx * (w / 2), p.z + nz * (w / 2));
       const right = new THREE.Vector2(p.x - nx * (w / 2), p.z - nz * (w / 2));

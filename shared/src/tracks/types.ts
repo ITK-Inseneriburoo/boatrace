@@ -21,6 +21,8 @@ export interface IslandDef {
 export interface GateDef {
   /** parameeter piki suletud rajasplaini [0,1) */
   t: number;
+  /** külgnihe splaini normaali suunas (m); positiivne = sõidusuunas vasakule */
+  offset?: number;
   /** värava laius (m), vaikimisi 22 */
   width?: number;
 }

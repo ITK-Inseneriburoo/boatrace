@@ -2,14 +2,16 @@ import type { TrackDef } from "./types";
 
 /**
  * Jõekanjon — kitsas käänuline kanal kõrgete kaljuseinte vahel.
- * Hoovus lükkab piki rada; kividerohke ja andestamatu.
+ * Hoovus lükkab piki rada; nihkes väravad ja kesksed takistused nõuavad
+ * enne kitsaid kurve teadlikku sõiduliini.
  */
 export const joekanjon: TrackDef = {
   id: "joekanjon",
   nimi: "Jõekanjon",
-  kirjeldus: "Kitsas kanjon, kiire hoovus ja kaljud — täpsusesõit",
+  kirjeldus: "Kitsas kanjon, vastassuunalised šikaanid ja kiire hoovus",
   defaultLaps: 2,
   seed: 4242,
+  ghostVersion: 2,
   route: [
     [-350, -60],
     [-260, -145],
@@ -49,20 +51,20 @@ export const joekanjon: TrackDef = {
     carveWidth: 34,
   },
   gates: [
-    { t: 0.05, width: 17 },
-    { t: 0.11 },
-    { t: 0.17, width: 16 },
-    { t: 0.23 },
-    { t: 0.3, width: 17 },
-    { t: 0.37 },
-    { t: 0.44, width: 16 },
-    { t: 0.51 },
-    { t: 0.58, width: 17 },
-    { t: 0.65 },
-    { t: 0.72, width: 16 },
-    { t: 0.79 },
-    { t: 0.86, width: 17 },
-    { t: 0.93 },
+    { t: 0.05, offset: -3, width: 16 },
+    { t: 0.11, offset: 3, width: 17 },
+    { t: 0.17, offset: -4, width: 15 },
+    { t: 0.23, offset: 3, width: 17 },
+    { t: 0.3, offset: -3, width: 16 },
+    { t: 0.37, offset: 4, width: 16 },
+    { t: 0.44, offset: -4, width: 15 },
+    { t: 0.51, offset: 3, width: 17 },
+    { t: 0.58, offset: -3, width: 16 },
+    { t: 0.65, offset: 4, width: 16 },
+    { t: 0.72, offset: -4, width: 15 },
+    { t: 0.79, offset: 3, width: 17 },
+    { t: 0.86, offset: -3, width: 16 },
+    { t: 0.93, offset: 3, width: 17 },
   ],
   ramps: [
     { t: 0.26, offset: 0, height: 2.6, length: 15 },
@@ -77,16 +79,16 @@ export const joekanjon: TrackDef = {
   obstacles: [
     { kind: "kivi", t: 0.03, offset: -8, scale: 1.4 },
     { kind: "kivi", t: 0.08, offset: 9 },
-    { kind: "palk", t: 0.14, offset: -6 },
+    { kind: "palk", t: 0.14, offset: -1, scale: 1.05 },
     { kind: "kivi", t: 0.2, offset: 7, scale: 1.6 },
     { kind: "kivi", t: 0.28, offset: -9, scale: 1.1 },
-    { kind: "palk", t: 0.34, offset: 6 },
+    { kind: "palk", t: 0.34, offset: 1, scale: 1.05 },
     { kind: "kivi", t: 0.4, offset: -7, scale: 1.3 },
     { kind: "kivi", t: 0.47, offset: 9, scale: 0.9 },
-    { kind: "palk", t: 0.54, offset: -8 },
+    { kind: "palk", t: 0.54, offset: -1, scale: 1.05 },
     { kind: "kivi", t: 0.6, offset: 6, scale: 1.5 },
     { kind: "kivi", t: 0.68, offset: -6 },
-    { kind: "palk", t: 0.76, offset: 8 },
+    { kind: "palk", t: 0.76, offset: 1, scale: 1.05 },
     { kind: "kivi", t: 0.82, offset: -9, scale: 1.2 },
     { kind: "kivi", t: 0.95, offset: 7, scale: 1.4 },
   ],

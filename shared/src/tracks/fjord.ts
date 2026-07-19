@@ -2,14 +2,16 @@ import type { TrackDef } from "./types";
 
 /**
  * Fjord — põhjamaine kitsas laht lumiste kaljuseinte vahel.
- * Hüpetele üles ehitatud rada: viis rampi, kitsad väravad, pikad sirged.
+ * Hüpetele üles ehitatud rada: viis rampi, vahelduvad kitsad väravad ning
+ * ohutu ja kiire liini vahel valimist nõudvad takistused.
  */
 export const fjord: TrackDef = {
   id: "fjord",
   nimi: "Fjord",
-  kirjeldus: "Lumised kaljuseinad ja viis hüpperampi — lennukas rada",
+  kirjeldus: "Lumised kaljuseinad, hüpped ja kiired külgvahetused",
   defaultLaps: 2,
   seed: 9917,
+  ghostVersion: 2,
   route: [
     [-460, -80],
     [-300, -170],
@@ -50,20 +52,20 @@ export const fjord: TrackDef = {
     carveWidth: 36,
   },
   gates: [
-    { t: 0.05, width: 18 },
-    { t: 0.11 },
-    { t: 0.17, width: 16 },
-    { t: 0.24 },
-    { t: 0.31, width: 18 },
-    { t: 0.38 },
-    { t: 0.45, width: 16 },
-    { t: 0.52 },
-    { t: 0.59, width: 18 },
-    { t: 0.66 },
-    { t: 0.73, width: 16 },
-    { t: 0.8 },
-    { t: 0.87, width: 18 },
-    { t: 0.94 },
+    { t: 0.05, offset: -3, width: 17 },
+    { t: 0.11, offset: 3, width: 18 },
+    { t: 0.17, offset: -4, width: 15 },
+    { t: 0.24, offset: 4, width: 17 },
+    { t: 0.31, offset: -3, width: 17 },
+    { t: 0.38, offset: 4, width: 16 },
+    { t: 0.45, offset: -4, width: 15 },
+    { t: 0.52, offset: 3, width: 17 },
+    { t: 0.59, offset: -3, width: 17 },
+    { t: 0.66, offset: 3, width: 16 },
+    { t: 0.73, offset: -4, width: 15 },
+    { t: 0.8, offset: 4, width: 17 },
+    { t: 0.87, offset: -3, width: 17 },
+    { t: 0.94, offset: 3, width: 18 },
   ],
   ramps: [
     { t: 0.12, offset: 0, height: 2.4, length: 14 },
@@ -80,16 +82,16 @@ export const fjord: TrackDef = {
   obstacles: [
     { kind: "kivi", t: 0.07, offset: 8, scale: 1.5 },
     { kind: "kivi", t: 0.15, offset: -9, scale: 1.2 },
-    { kind: "palk", t: 0.21, offset: 6 },
+    { kind: "palk", t: 0.21, offset: 1, scale: 1.1 },
     { kind: "kivi", t: 0.27, offset: 10, scale: 1.7 },
     { kind: "kivi", t: 0.35, offset: -7 },
-    { kind: "palk", t: 0.42, offset: 8 },
+    { kind: "palk", t: 0.42, offset: 1, scale: 1.1 },
     { kind: "kivi", t: 0.5, offset: -10, scale: 1.4 },
     { kind: "kivi", t: 0.57, offset: 7, scale: 0.9 },
-    { kind: "palk", t: 0.63, offset: -6 },
+    { kind: "palk", t: 0.63, offset: -1, scale: 1.1 },
     { kind: "kivi", t: 0.7, offset: 9, scale: 1.6 },
     { kind: "kivi", t: 0.78, offset: -8, scale: 1.1 },
-    { kind: "palk", t: 0.9, offset: 7 },
+    { kind: "palk", t: 0.9, offset: 1, scale: 1.1 },
   ],
   props: [
     { kind: "tuletorn", x: 445, z: -95, scale: 1.15 },
