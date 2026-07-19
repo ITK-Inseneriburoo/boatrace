@@ -178,6 +178,13 @@ export class Game {
     this.screens.register(this.lobbyScreen);
     this.screens.register(this.roomScreen);
     uiRoot.appendChild(this.hud.el);
+    // ITK bränd püsiva ülekattemärgina üleval keskel — nähtav igal
+    // ekraanil (avaleht, sõit, tulemused)
+    const brand = document.createElement("img");
+    brand.id = "brand-badge";
+    brand.src = "/brand/logo-ITK-white.svg";
+    brand.alt = "ITK Inseneribüroo";
+    uiRoot.appendChild(brand);
 
     this.menu.onSolo = (c) => this.startSolo(c);
     this.menu.onMultiplayer = (c) => this.connectMultiplayer(c);

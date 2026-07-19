@@ -244,7 +244,7 @@ export class MainMenu implements Screen {
       {},
       h(
         "div",
-        { class: "center-wrap" },
+        { class: "center-wrap menu-wrap" },
         h("h1", { class: "title" }, t("menu.title")),
         h("p", { class: "subtitle" }, t("menu.subtitle")),
         h(
