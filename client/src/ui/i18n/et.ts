@@ -30,6 +30,7 @@ const et = {
 
   "touch.rool": "ROOL",
   "touch.gaas": "GAAS",
+  "touch.gaasBoost": "Gaas — lükka lõpust edasi hoo jaoks",
   "touch.voime": "VÕIME",
   "touch.boost": "HOOG",
   "touch.tuli": "TULI",
@@ -50,7 +51,7 @@ const et = {
   "touch.poora": "Pööra seade rõhtpaigutusse",
 
   "hud.grafikaLangetatud": "Graafika langetatud (madal FPS)",
-  "touch.legend": "Puuteekraan: kalluta roolimiseks · parem hoob on gaas/tagurpidikäik · tegevusnuppe saab hoida koos gaasiga",
+  "touch.legend": "Puuteekraan: vasak hoob on rool, soovi korral vali KALLUTA · parem hoob on gaas/tagurpidikäik · hoo jaoks lükka gaas lõpust veel üks aste üles",
   "hud.ring": "Ring",
   "hud.varav": "Värav",
   "hud.koht": "koht",

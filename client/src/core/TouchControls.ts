@@ -10,6 +10,9 @@ type PermissionSensorCtor = {
   requestPermission?: () => Promise<"granted" | "denied">;
 };
 
+const THROTTLE_BOOST_THRESHOLD = 1.18;
+const THROTTLE_BOOST_RELEASE = 1.08;
+
 /**
  * Mobiilse võidusõidu juhtkiht. Füüsika ei tea puuteekraanist midagi:
  * see klass normaliseerib hoovad ja nupud samasse Input olekusse.
@@ -23,6 +26,7 @@ export class TouchControls {
   private readonly useGravitySensor = isAppleMobile();
   private readonly steerPad: HTMLElement;
   private readonly steerKnob: HTMLElement;
+  private readonly gasPad: HTMLElement;
   private readonly gasKnob: HTMLElement;
   private readonly abilityBtn: HTMLButtonElement;
   private readonly tiltStatus: HTMLElement;
@@ -36,10 +40,11 @@ export class TouchControls {
   private tiltSteer = 0;
   private padSteer = 0;
   private throttle = 0;
+  private throttleBoosting = false;
   private portrait = matchMedia("(orientation: portrait)").matches;
   private sensorTimer: number | null = null;
   private tiltRequest: Promise<void> | null = null;
-  private manualSteering = false;
+  private manualSteering = true;
   private readonly activePointers = new Map<HTMLElement, number>();
   private readonly lastPointerDown = new WeakMap<HTMLElement, number>();
   private readonly resetFallbackTouches: Array<() => void> = [];
@@ -54,9 +59,10 @@ export class TouchControls {
     );
 
     this.gasKnob = h("div", { class: "touch-stick-knob" });
-    const gasPad = h(
+    this.gasPad = h(
       "div",
-      { class: "touch-stick touch-throttle", "aria-label": t("touch.gaas") },
+      { class: "touch-stick touch-throttle", "aria-label": t("touch.gaasBoost") },
+      h("span", { class: "touch-throttle-boost" }, t("touch.boost")),
       h("span", { class: "touch-throttle-forward" }, "+"),
       h("span", { class: "touch-stick-label" }, t("touch.gaas")),
       h("span", { class: "touch-throttle-back" }, "−"),
@@ -67,13 +73,12 @@ export class TouchControls {
     const actions = h(
       "div",
       { class: "touch-actions" },
-      this.holdButton(t("touch.boost"), "boost", "boost"),
       this.abilityBtn,
       this.tapButton(t("touch.tuli"), "action", "fire"),
       this.tapButton(t("touch.rajale"), "respawn", "respawn"),
     );
 
-    this.tiltStatus = h("div", { class: "touch-tilt-status" }, t("touch.kallutusOotel"));
+    this.tiltStatus = h("div", { class: "touch-tilt-status" }, t("touch.kasiroolSees"));
     this.recalibrateBtn = h(
       "button",
       {
@@ -118,7 +123,7 @@ export class TouchControls {
       tools,
       this.steerPad,
       actions,
-      gasPad,
+      this.gasPad,
       portrait,
     );
 
@@ -126,10 +131,21 @@ export class TouchControls {
       this.padSteer = value;
       this.syncAxes();
     });
-    this.bindAxis(gasPad, this.gasKnob, "y", (value) => {
-      this.throttle = -value;
-      this.syncAxes();
-    });
+    this.bindAxis(
+      this.gasPad,
+      this.gasKnob,
+      "y",
+      (value) => {
+        this.throttle = Math.max(-1, Math.min(1, -value));
+        this.throttleBoosting = this.throttleBoosting
+          ? value <= -THROTTLE_BOOST_RELEASE
+          : value <= -THROTTLE_BOOST_THRESHOLD;
+        this.gasPad.classList.toggle("boosting", this.throttleBoosting);
+        this.input.setTouchButton("boost", this.throttleBoosting && !this.portrait);
+        this.syncAxes();
+      },
+      { min: -1.3, max: 1 },
+    );
 
     window.addEventListener("resize", this.syncOrientation);
     screen.orientation?.addEventListener("change", this.onScreenOrientationChange);
@@ -149,7 +165,9 @@ export class TouchControls {
    * requestPermission() väljakutset pärast await'i või taimerit.
    */
   prepareTilt(): Promise<void> {
-    if (!this.enabled || this.tiltState === "active") return Promise.resolve();
+    if (!this.enabled || this.manualSteering || this.tiltState === "active") {
+      return Promise.resolve();
+    }
     if (this.tiltRequest) return this.tiltRequest;
     if (this.tiltState === "pending") return Promise.resolve();
 
@@ -386,9 +404,11 @@ export class TouchControls {
 
   private resetControls(): void {
     this.throttle = 0;
+    this.throttleBoosting = false;
     this.padSteer = 0;
     this.tiltSteer = 0;
     this.input.resetTouch();
+    this.gasPad.classList.remove("boosting");
     this.gasKnob.style.transform = "";
     this.steerKnob.style.transform = "";
     for (const active of this.el.querySelectorAll(".pressed")) active.classList.remove("pressed");
@@ -408,13 +428,14 @@ export class TouchControls {
     knob: HTMLElement,
     axis: "x" | "y",
     onValue: (value: number) => void,
+    range: { min: number; max: number } = { min: -1, max: 1 },
   ): void {
     const update = (clientX: number, clientY: number): void => {
       const rect = zone.getBoundingClientRect();
       const center = axis === "x" ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
       const coordinate = axis === "x" ? clientX : clientY;
       const radius = (axis === "x" ? rect.width : rect.height) * 0.36;
-      const value = Math.max(-1, Math.min(1, (coordinate - center) / radius));
+      const value = Math.max(range.min, Math.min(range.max, (coordinate - center) / radius));
       onValue(value);
       const distance = value * radius;
       knob.style.transform =
