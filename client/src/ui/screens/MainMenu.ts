@@ -7,6 +7,8 @@ import { TRACKS, TRACK_IDS } from "@shared/tracks";
 import type { TrackId, VehicleId, WeatherId } from "@shared/types";
 import { WEATHERS } from "../../world/WeatherPresets";
 import type { GraphicsLevel } from "../../core/Quality";
+import { isTouchDevice } from "../../core/Platform";
+import { PwaInstall } from "../PwaInstall";
 
 export type { GraphicsLevel };
 
@@ -42,7 +44,7 @@ export class MainMenu implements Screen {
     track: "saarestik",
     weather: "paike",
     laps: DEFAULT_LAPS,
-    graphics: "korge",
+    graphics: isTouchDevice() ? "keskmine" : "korge",
   };
   private nameInput: HTMLInputElement;
   private mpButton: HTMLButtonElement;
@@ -284,6 +286,7 @@ export class MainMenu implements Screen {
           section(
             h("div", { class: "row", style: "justify-content:center" }, soloBtn, this.mpButton, sprintBtn, randomBtn),
           ),
+          section(new PwaInstall().el),
           section(
             h(
               "div",

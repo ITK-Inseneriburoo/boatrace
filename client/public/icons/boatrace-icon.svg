@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Boatrace">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b2940"/>
+      <stop offset="1" stop-color="#041018"/>
+    </linearGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ffcf1"/>
+      <stop offset="0.5" stop-color="#2ec4b6"/>
+      <stop offset="1" stop-color="#087f8c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="244" r="176" fill="#0d354a" opacity=".62"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M74 354c92-39 155-31 224 1 50 23 92 23 140-1" stroke="#087f8c" stroke-width="18"/>
+    <path d="M54 393c95-34 164-27 234 5 56 26 107 22 172-8" stroke="#2ec4b6" stroke-width="14"/>
+    <path d="M105 429c71-21 127-15 184 8 49 20 91 19 142-3" stroke="#8ffcf1" stroke-width="8" opacity=".9"/>
+  </g>
+  <g transform="translate(-65 106) scale(1.05)">
+    <path d="M162 189H288l31-41h77l45 41h79l-25 29c-21 25-49 37-86 37H245c-32 0-56-11-74-32Z" fill="url(#hull)" stroke="#031a26" stroke-width="10" stroke-linejoin="round"/>
+    <path d="m309 188 27-31h52l34 31Z" fill="#eafffd" stroke="#031a26" stroke-width="9" stroke-linejoin="round"/>
+    <path d="M347 163h35l21 25h-79Z" fill="#176b7e"/>
+    <path d="M204 219c77 18 204 18 281-3-18 25-43 34-80 34H253c-21 0-37-9-49-31Z" fill="#e7fffc"/>
+    <circle cx="431" cy="171" r="9" fill="#eafffd" stroke="#031a26" stroke-width="6"/>
+  </g>
+  <path d="M87 278h121M118 245h110M64 311h168" stroke="#63e6ff" stroke-width="10" stroke-linecap="round" opacity=".72"/>
+</svg>

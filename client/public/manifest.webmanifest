@@ -1,0 +1,28 @@
+{
+  "id": "/",
+  "name": "Boatrace — paadivõidusõit",
+  "short_name": "Boatrace",
+  "description": "ITK Inseneribüroo 3D paadivõidusõidumäng",
+  "lang": "et",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#061019",
+  "theme_color": "#061019",
+  "icons": [
+    {
+      "src": "/icons/boatrace-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/boatrace-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

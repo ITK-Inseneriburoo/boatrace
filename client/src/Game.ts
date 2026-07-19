@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { Engine } from "./core/Engine";
 import { Input } from "./core/Input";
+import { TouchControls } from "./core/TouchControls";
+import { isAppleMobile } from "./core/Platform";
 import { Ocean } from "./world/Ocean";
 import { SkySystem } from "./world/SkySystem";
 import { WEATHERS, type WeatherPreset } from "./world/WeatherPresets";
@@ -34,7 +36,7 @@ import { WakeSystem } from "./world/WakeSystem";
 import { Rain } from "./world/Rain";
 import { VEHICLES } from "@shared/vehicles";
 import { clamp } from "@shared/math";
-import { QUALITY_TIERS, lowerLevel, setCurrentTier } from "./core/Quality";
+import { QUALITY_TIERS, lowerLevel, setCurrentTier, type QualityTier } from "./core/Quality";
 import { setTextureQuality } from "./core/Textures";
 import { setCurrentEnvIntensity, applyEnvIntensityTo } from "./world/env";
 import { PlanarReflection } from "./world/PlanarReflection";
@@ -62,6 +64,7 @@ export class Game {
   readonly engine: Engine;
   readonly input = new Input();
   readonly sky: SkySystem;
+  private readonly appleMobile = isAppleMobile();
   readonly ocean = new Ocean();
 
   private screens: ScreenManager;
@@ -70,6 +73,7 @@ export class Game {
   private lobbyScreen = new LobbyBrowser();
   private roomScreen = new RoomScreen();
   private hud = new Hud();
+  private touch = new TouchControls(this.input);
 
   private track: TrackWorld;
   private boat: PlayerBoat | null = null;
@@ -80,6 +84,7 @@ export class Game {
   private mode: "solo" | "mp" = "solo";
   private countdownT = 0;
   private lastCountShown = -1;
+  private touchStartPending = false;
   private finishTimer = 0;
   private paused = false;
   private choices: MenuChoices | null = null;
@@ -181,9 +186,20 @@ export class Game {
     this.screens.register(this.lobbyScreen);
     this.screens.register(this.roomScreen);
     uiRoot.appendChild(this.hud.el);
+    this.hud.el.appendChild(this.touch.el);
 
-    this.menu.onSolo = (c) => this.startSolo(c);
-    this.menu.onMultiplayer = (c) => this.connectMultiplayer(c);
+    this.menu.onSolo = (c) => {
+      if (this.touchStartPending) return;
+      this.touchStartPending = true;
+      void this.touch
+        .prepareTilt()
+        .then(() => this.startSolo(c))
+        .finally(() => (this.touchStartPending = false));
+    };
+    this.menu.onMultiplayer = (c) => {
+      void this.touch.prepareTilt();
+      this.connectMultiplayer(c);
+    };
     this.menu.onGraphics = (level) => this.applyGraphics(level);
     this.menu.onTrack = (id) => {
       if (this.state === "menu") this.setTrack(id);
@@ -272,7 +288,19 @@ export class Game {
     if (userChoice) this.userGraphics = level;
     this.effectiveGraphics = level;
     this.lowFpsTime = 0;
-    const tier = QUALITY_TIERS[level];
+    const selectedTier = QUALITY_TIERS[level];
+    // iPadOS WebKit võib HalfFloat post-processing RT ja läbipaistvate DOM-kihtide
+    // kooskomposiitimisel anda terve kaadri suuruseid musti sähvatusi. Apple'i
+    // puuteseadmel renderdame otse canvas'ele; maailma detailsus jääb alles.
+    const tier: QualityTier = this.appleMobile
+      ? {
+          ...selectedTier,
+          pixelRatio: Math.min(selectedTier.pixelRatio, 1.25),
+          pipeline: { composer: false, samples: 0, aa: "none", bloom: false, gtao: false },
+          ocean: { ...selectedTier.ocean, planarRes: 0 },
+          glassTransmission: false,
+        }
+      : selectedTier;
     setCurrentTier(tier);
     this.engine.setPixelRatioCap(tier.pixelRatio);
     this.engine.pipeline.configure(tier.pipeline);
@@ -383,6 +411,7 @@ export class Game {
 
     this.screens.show(null);
     this.hud.show();
+    this.touch.show(c.vehicle);
     this.gateArrow.visible = true;
     this.boostCooldown.clear();
     this.clearShots();
@@ -479,6 +508,7 @@ export class Game {
       this.results.setResults(rows);
       this.state = "results";
       this.hud.hide();
+      this.touch.hide();
       this.gateArrow.visible = false;
       this.clearShots();
       this.stopRaceAudio();
@@ -573,6 +603,8 @@ export class Game {
     this.screens.show(null);
     this.hud.show(true);
     this.hud.setSpectator(this.spectating, t("hud.vaatleja.legend"));
+    if (this.spectating) this.touch.hide();
+    else this.touch.show(me?.vehicle ?? "kiirpaat");
     this.gateArrow.visible = !this.spectating;
     this.state = "countdown";
   }
@@ -580,6 +612,7 @@ export class Game {
   private backToRoom(): void {
     this.state = "room";
     this.hud.hide();
+    this.touch.hide();
     this.hud.setSpectator(false);
     this.spectating = false;
     this.gateArrow.visible = false;
@@ -724,6 +757,7 @@ export class Game {
   private setPaused(on: boolean): void {
     this.paused = on;
     this.hud.setPaused(on, this.mode === "mp" ? t("paus.lahku") : t("paus.katkesta"));
+    this.touch.setPaused(on);
   }
 
   /** Katkesta sõit pausimenüüst */
@@ -732,6 +766,7 @@ export class Game {
     if (this.mode === "mp") {
       this.net?.send({ type: "leaveRoom" });
       this.hud.hide();
+      this.touch.hide();
       this.hud.setSpectator(false);
       this.spectating = false;
       this.gateArrow.visible = false;
@@ -749,6 +784,7 @@ export class Game {
     this.state = "menu";
     this.mode = "solo";
     this.hud.hide();
+    this.touch.hide();
     this.hud.setSpectator(false);
     this.spectating = false;
     this.gateArrow.visible = false;
@@ -766,6 +802,7 @@ export class Game {
     if (!this.race || !this.choices) return;
     this.state = "results";
     this.hud.hide();
+    this.touch.hide();
     this.gateArrow.visible = false;
     this.clearShots();
     this.stopRaceAudio();
@@ -825,12 +862,12 @@ export class Game {
     const inRace = this.state === "racing" || this.state === "countdown";
 
     // H — juhtimise legend sõidu/loenduse ajal
-    if (inRace && this.input.wasPressed("KeyH")) {
+    if (inRace && this.input.legendPressed) {
       this.hud.toggleLegend();
     }
 
     // Esc — pausimenüü (soolo peatab mängu; võrgus ainult overlay)
-    if (inRace && this.input.wasPressed("Escape")) {
+    if (inRace && this.input.pausePressed) {
       this.setPaused(!this.paused);
     }
     if (this.paused && this.mode === "solo") return;

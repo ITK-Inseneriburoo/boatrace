@@ -1,4 +1,5 @@
 import { h } from "./ScreenManager";
+import { t } from "./i18n/et";
 
 const RIDA: [string, string][] = [
   ["W / ↑", "Gaas"],
@@ -42,6 +43,11 @@ export function buildLegend(includeSpectator = true): HTMLElement {
   wrap.appendChild(
     h("div", { style: "color:var(--text-dim);font-size:.78rem;margin-top:4px" }, "Gamepad: RT gaas · LT pidur · vasak kepp rool · B/RB boost · A võime · X veekahur"),
   );
+  if (navigator.maxTouchPoints > 0) {
+    wrap.appendChild(
+      h("div", { style: "color:var(--accent);font-size:.8rem;margin-top:7px" }, t("touch.legend")),
+    );
+  }
   if (includeSpectator) {
     wrap.appendChild(
       h("div", { style: "color:var(--text-dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;margin-top:8px" }, "Vaatleja"),
