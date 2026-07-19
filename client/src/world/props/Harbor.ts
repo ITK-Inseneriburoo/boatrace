@@ -400,12 +400,12 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
       if (!tex) return;
       const box = hullBox;
       const halfW = (box.max.x - box.min.x) / 2;
-      const logoY = box.min.y + (box.max.y - box.min.y) * 0.55;
+      const logoY = box.min.y + (box.max.y - box.min.y) * 0.68;
       // Keskkere kohal (kere kõige laiem koht) — nihkega paneel ulatuks
       // kitseneva ahtri/vööri juures kerest välja ja paistaks hõljuvana
       for (const s of [-1, 1]) {
         const logo = new THREE.Mesh(
-          new THREE.PlaneGeometry(L * 0.096, L * 0.048),
+          new THREE.PlaneGeometry(L * 0.072, L * 0.036),
           // Kergelt läbipaistev, et kere ilmastikutekstuur kumaks läbi
           new THREE.MeshStandardMaterial({
             map: tex,
