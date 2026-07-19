@@ -247,10 +247,17 @@ export class TrackWorld {
     });
     this.group.add(buildObstacleMeshes(placed, def.seed));
 
-    // Puud + propid
+    // Puud + propid. Maapealsed propid tõstetakse maastiku pinnale
+    // (kai/muul/laev/majakas on vees ja jäävad veetasapinnale)
     this.group.add(buildVegetation(def, this.terrain));
+    const maaPropid = new Set(["kraana", "konteinerivirn", "ladu", "tuletorn", "lipp"]);
     def.props.forEach((pd, i) => {
-      this.group.add(buildProp(pd, this.colliders, def.seed + i * 17));
+      const mesh = buildProp(pd, this.colliders, def.seed + i * 17);
+      mesh.name = `prop-${pd.kind}-${i}`;
+      if (maaPropid.has(pd.kind)) {
+        mesh.position.y = Math.max(0, this.terrain.getHeight(pd.x, pd.z) - 0.1);
+      }
+      this.group.add(mesh);
     });
   }
 

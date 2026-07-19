@@ -22,7 +22,7 @@ scripts/fetch-assets.sh  # download CC0 assets (HDRIs, PBR textures) into client
 
 Typecheck a single workspace: `npm run typecheck -w client` (or `-w server`, `-w shared`).
 
-Dev helper pages (Vite dev server): `/boat-test.html` (all boat models), `/wake-test.html` (wake render target).
+Dev helper pages (Vite dev server): `/boat-test.html` (all boat models), `/wake-test.html` (wake render target), `/map-test.html?track=<id>&h=<camHeight>&tilt=<0..1.2>` (track overview from above).
 
 Production deployment uses pm2 via `ecosystem.config.cjs`.
 

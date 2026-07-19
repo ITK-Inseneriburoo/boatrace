@@ -221,6 +221,9 @@ function buildKraana(scale: number, colliders: ColliderSet, world: THREE.Matrix4
   void loadModel("props/harbor-crane", false).then((m) => {
     if (!m) return;
     fitToSize(m, H * 1.3, "y");
+    // Mudel seisab peenikestel tugijalgadel, rattad ripuvad ~1 m õhus —
+    // eemalt paistab kraana hõljuvat. Vajuta alla, et rattad toetuks maha
+    m.position.y -= 1.0;
     g.clear();
     g.add(m);
   });
@@ -259,13 +262,8 @@ function buildKonteinerivirn(scale: number, colliders: ColliderSet, world: THREE
   const p = new THREE.Vector3().applyMatrix4(world);
   colliders.circles.push({ x: p.x, z: p.z, r: Math.max(CL, CW * rows) * 0.75 });
 
-  // Kenney konteinerihunnik, kui saadaval
-  void loadModel("cargo-pile-a").then((m) => {
-    if (!m) return;
-    fitToSize(m, CL * 1.9, "z");
-    g.clear();
-    g.add(m);
-  });
+  // NB: teadlikult ilma cargo-pile-a.glb asenduseta — Kenney kuhil on
+  // kotid/tünnid, mis ei loe konteineriterminalina; kastid jäävad
   return g;
 }
 

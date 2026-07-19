@@ -47,17 +47,42 @@ export class Terrain {
 
         let h = -t.baseDepth;
         let islandMask = 0;
+        let plateau = 0;
+        let flatMask = 0;
         for (const isl of t.islands) {
           const d = Math.hypot(x - isl.x, z - isl.z) / isl.r;
-          if (d < 1.6) {
+          if (isl.flat) {
+            // Kaiplatvorm: tasane lagi, järsk sein. Max-liide, et
+            // kattuvad platvormid ei kuhjuks künkaks. w+d annab
+            // ristkülikukujulise kai, muidu ümar platvorm.
+            const EDGE = 12; // seina laius meetrites (lagi -> merepõhi)
+            let dist: number;
+            if (isl.w && isl.d) {
+              const c = Math.cos(isl.rot ?? 0), s = Math.sin(isl.rot ?? 0);
+              const lx = c * (x - isl.x) + s * (z - isl.z);
+              const lz = -s * (x - isl.x) + c * (z - isl.z);
+              dist = Math.hypot(
+                Math.max(0, Math.abs(lx) - isl.w / 2),
+                Math.max(0, Math.abs(lz) - isl.d / 2),
+              );
+            } else {
+              dist = Math.max(0, d * isl.r - isl.r * 0.7);
+            }
+            if (dist < EDGE) {
+              const bump = smoothstep(EDGE, 0, dist);
+              plateau = Math.max(plateau, (isl.h + t.baseDepth) * bump);
+              flatMask = Math.max(flatMask, bump);
+            }
+          } else if (d < 1.6) {
             const bump = Math.pow(Math.max(0, 1 - d * d * 0.62), 1.6);
             h += (isl.h + t.baseDepth) * bump;
             islandMask = Math.max(islandMask, bump);
           }
         }
-        // Müra ainult saarte lähedal (meri jääb siledaks)
+        h = Math.max(h, -t.baseDepth + plateau);
+        // Müra ainult saarte lähedal (meri jääb siledaks, platvormid lamedaks)
         const n = fbm2(x * t.noiseScale, z * t.noiseScale, 4, track.seed);
-        h += (n - 0.45) * t.noiseAmp * islandMask;
+        h += (n - 0.45) * t.noiseAmp * islandMask * (1 - flatMask);
 
         this.heights[iz * GRID + ix] = h;
       }
@@ -112,9 +137,10 @@ export class Terrain {
       if (h > snowAbove) {
         c.lerp(snow, clamp((h - snowAbove) / 4, 0, 1));
       }
-      // Kerge variatsioon
-      const v = fbm2(x * 0.05, z * 0.05, 2, track.seed + 7) * 0.16;
-      c.offsetHSL(0, 0, v - 0.08);
+      // Kerge variatsioon (tehiskate on ühtlasem — asfalt ei laigu nagu loodus)
+      const vAmp = pal?.kunstkate ? 0.05 : 0.16;
+      const v = fbm2(x * 0.05, z * 0.05, 2, track.seed + 7) * vAmp;
+      c.offsetHSL(0, 0, v - vAmp / 2);
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
@@ -160,6 +186,9 @@ export class Terrain {
     mat: THREE.MeshStandardMaterial,
     track: TrackDef,
   ): Promise<void> {
+    // Tehiskattega (asfalt/betoon) rajad jäävad vertex-värvidele —
+    // loodustekstuurid muudaks kaid liivarannaks
+    if (track.palette?.kunstkate) return;
     const [sand, grass, rock] = await Promise.all([
       loadPbrSet("/textures/terrain/sand"),
       loadPbrSet("/textures/terrain/grass"),

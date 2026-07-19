@@ -8,6 +8,14 @@ export interface IslandDef {
   r: number;
   /** tipu kõrgus (m) */
   h: number;
+  /** lame platvorm (betoonkai) järsu seinaga ümara künka asemel */
+  flat?: boolean;
+  /** ristkülikukujulise platvormi laius x-suunas (m); koos d-ga teeb lameda saare kandiliseks */
+  w?: number;
+  /** ristkülikukujulise platvormi pikkus z-suunas (m) */
+  d?: number;
+  /** ristküliku pööre radiaanides ümber Y */
+  rot?: number;
 }
 
 export interface GateDef {
@@ -102,6 +110,8 @@ export interface TrackDef {
     rock: number;
     /** sellest kõrgusest ülespoole lumi */
     snowAbove?: number;
+    /** true = tehiskate (asfalt/betoon): loodustekstuuride splat jääb ära */
+    kunstkate?: boolean;
   };
   allowedWeathers: WeatherId[];
 }

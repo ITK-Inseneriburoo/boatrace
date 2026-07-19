@@ -27,24 +27,19 @@ export const sadamalinn: TrackDef = {
   terrain: {
     size: 800,
     islands: [
-      // Põhjakai (mandri serv) — lamedad tööstusplatvormid
-      { x: -160, z: -290, r: 100, h: 5.5 },
-      { x: 0, z: -310, r: 110, h: 6 },
-      { x: 160, z: -290, r: 100, h: 5.5 },
+      // Põhjakai (mandri serv) — üks pikk kandiline konteineriterminal
+      { x: 0, z: -310, r: 290, h: 3.6, flat: true, w: 570, d: 150 },
       // Idaterminal
-      { x: 330, z: -30, r: 100, h: 5 },
-      { x: 350, z: 140, r: 85, h: 5 },
+      { x: 345, z: 55, r: 150, h: 3.4, flat: true, w: 160, d: 270 },
       // Lõunadokid
-      { x: 40, z: 330, r: 115, h: 5.5 },
-      { x: -180, z: 300, r: 80, h: 5 },
+      { x: 30, z: 320, r: 180, h: 3.6, flat: true, w: 350, d: 140 },
       // Läänekai
-      { x: -340, z: -20, r: 95, h: 5.5 },
-      { x: -300, z: -180, r: 70, h: 5 },
-      // Keskne kaisaar, mille ümber rada käib
-      { x: 20, z: 20, r: 70, h: 4.5 },
+      { x: -335, z: -95, r: 175, h: 3.6, flat: true, w: 140, d: 340 },
+      // Keskne terminalisaar, mille ümber rada käib
+      { x: 20, z: 20, r: 90, h: 3.2, flat: true, w: 130, d: 115 },
     ],
     noiseScale: 0.008,
-    noiseAmp: 3.5,
+    noiseAmp: 1.2,
     baseDepth: 8,
     carveWidth: 40,
   },
@@ -83,38 +78,61 @@ export const sadamalinn: TrackDef = {
     { kind: "kivi", t: 0.88, offset: -11, scale: 0.9 },
   ],
   props: [
-    // Põhjakai tööstus: kraanad + konteinerid + laev
-    { kind: "kraana", x: -120, z: -238, rot: 0 },
-    { kind: "kraana", x: 10, z: -252, rot: 0 },
-    { kind: "kraana", x: 140, z: -238, rot: 0 },
-    { kind: "konteinerivirn", x: -70, z: -262, rot: 0.2 },
-    { kind: "konteinerivirn", x: 65, z: -272, rot: -0.15 },
-    { kind: "konteinerivirn", x: 185, z: -258, rot: 0.3 },
-    { kind: "kaubalaev", x: -30, z: -218, rot: 1.62 },
-    // Idaterminal: laod + konteinerid
-    { kind: "ladu", x: 320, z: 10, rot: 1.57 },
-    { kind: "ladu", x: 335, z: 105, rot: 1.57 },
-    { kind: "konteinerivirn", x: 292, z: 60, rot: 1.4 },
-    { kind: "kraana", x: 275, z: -50, rot: 2.2 },
-    // Lõunadokid: teine kaubalaev + kaid
-    { kind: "kaubalaev", x: 30, z: 262, rot: -1.45 },
-    { kind: "kai", x: -120, z: 255, rot: 0.6 },
-    { kind: "kai", x: 140, z: 250, rot: -0.7 },
-    // Läänekai
-    { kind: "ladu", x: -330, z: -60, rot: 0 },
-    { kind: "konteinerivirn", x: -295, z: 30, rot: -0.2 },
-    { kind: "kai", x: -270, z: -130, rot: 2.3 },
+    // Põhjakai: kraanade rivi + konteineririvid + kaubalaev kai ääres
+    { kind: "kraana", x: -180, z: -245, rot: 0 },
+    { kind: "kraana", x: -60, z: -245, rot: 0 },
+    { kind: "kraana", x: 70, z: -245, rot: 0 },
+    { kind: "kraana", x: 190, z: -245, rot: 0 },
+    { kind: "konteinerivirn", x: -220, z: -280, rot: 0.05 },
+    { kind: "konteinerivirn", x: -110, z: -285, rot: -0.05 },
+    { kind: "konteinerivirn", x: 10, z: -280, rot: 0.1 },
+    { kind: "konteinerivirn", x: 130, z: -288, rot: 0 },
+    { kind: "konteinerivirn", x: 225, z: -278, rot: -0.1 },
+    { kind: "ladu", x: -250, z: -330, rot: 0 },
+    { kind: "ladu", x: 60, z: -335, rot: 0 },
+    { kind: "kaubalaev", x: -20, z: -212, rot: 1.62 },
+    // Idaterminal: laod + konteinerid + kraana
+    { kind: "ladu", x: 330, z: 10, rot: 1.57 },
+    { kind: "ladu", x: 345, z: 105, rot: 1.57 },
+    { kind: "konteinerivirn", x: 320, z: 55, rot: 1.5 },
+    { kind: "konteinerivirn", x: 375, z: 150, rot: 1.6 },
+    { kind: "kraana", x: 290, z: -40, rot: 2.2 },
+    { kind: "tuletorn", x: 310, z: 172, scale: 0.9 },
+    // Lõunadokid: teine kaubalaev + puitkaid + kraana
+    { kind: "kaubalaev", x: 60, z: 228, rot: -1.45 },
+    { kind: "kai", x: -120, z: 235, rot: 0 },
+    { kind: "kai", x: 150, z: 232, rot: 0 },
+    { kind: "kraana", x: 90, z: 270, rot: 3.14 },
+    { kind: "konteinerivirn", x: 0, z: 275, rot: 0.08 },
+    { kind: "ladu", x: -80, z: 300, rot: 0 },
+    // Läänekai: laod + konteinerid + kraana
+    { kind: "ladu", x: -335, z: -60, rot: 0 },
+    { kind: "konteinerivirn", x: -320, z: 10, rot: -0.1 },
+    { kind: "konteinerivirn", x: -335, z: -160, rot: 0.05 },
+    { kind: "kraana", x: -300, z: -220, rot: 1.57 },
+    { kind: "kai", x: -245, z: -130, rot: 1.57 },
+    // Keskne terminalisaar: tihe konteineriväljak kahe kraanaga
+    { kind: "kraana", x: 0, z: 45, rot: -1.2 },
+    { kind: "kraana", x: 55, z: -15, rot: 2.0 },
+    { kind: "konteinerivirn", x: 30, z: 15, rot: 0.5 },
+    { kind: "konteinerivirn", x: -15, z: -10, rot: 0.4 },
     // Muulid + navigatsioon
     { kind: "muul", x: -60, z: 120, rot: 1.0 },
-    { kind: "tuletorn", x: 258, z: 175, scale: 0.9 },
     { kind: "majakas", x: -175, z: 20 },
     { kind: "majakas", x: 120, z: -80 },
     // ITK lipud kaidel
-    { kind: "lipp", x: -35, z: -258 },
-    { kind: "lipp", x: 95, z: -262 },
-    { kind: "lipp", x: 305, z: 55 },
-    { kind: "lipp", x: -5, z: 288 },
+    { kind: "lipp", x: -35, z: -250 },
+    { kind: "lipp", x: 120, z: -255 },
+    { kind: "lipp", x: 340, z: 75 },
+    { kind: "lipp", x: -5, z: 285 },
+    { kind: "lipp", x: 20, z: 62 },
   ],
-  treesPerIsland: 3,
+  treesPerIsland: 0,
+  palette: {
+    sand: 0x94918b, // betoonkai serv
+    grass: 0x565a5e, // asfalt
+    rock: 0x8a8781, // betoonsein
+    kunstkate: true,
+  },
   allowedWeathers: ["paike", "torm", "udu"],
 };
