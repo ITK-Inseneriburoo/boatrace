@@ -37,7 +37,7 @@ export const saarestik: TrackDef = {
       { x: -310, z: 250, r: 65, h: 8 },
       { x: -370, z: -30, r: 85, h: 12 },
       { x: -240, z: -300, r: 85, h: 9 },
-      { x: 90, z: -140, r: 30, h: 4 }, // väikesaared kanali ääres
+      { x: 90, z: -140, r: 44, h: 5 }, // kaluriküla saar
       { x: -140, z: 120, r: 26, h: 3.5 },
       { x: 170, z: 60, r: 22, h: 3 },
     ],

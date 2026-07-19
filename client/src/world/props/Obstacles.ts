@@ -14,6 +14,11 @@ export interface PlacedObstacle {
   r: number;
 }
 
+/** Visuaalse takistuse konservatiivne ülemine serv veetasemest. */
+export function obstacleTopY(kind: PlacedObstacle["kind"], scale: number): number {
+  return kind === "kivi" ? 0.15 + 1.05 * scale : 0.05 + 0.45 * scale;
+}
+
 function buildRockGeometry(rnd: () => number): THREE.BufferGeometry {
   // IcosahedronGeometry võib hoida servatippe tahkude kaupa dubleerituna.
   // Merge enne muljumist hoiab kivi ühe tervikliku massina, mitte "lehtedena".

@@ -5,7 +5,7 @@ import { mulberry32 } from "@shared/math";
 import { Terrain } from "./Terrain";
 import { BuoyField, type BuoyInstance } from "./props/Buoys";
 import { buildRampMesh, rampSurfaceHeight, type RampInstance } from "./props/Ramp";
-import { buildObstacleMeshes, type PlacedObstacle } from "./props/Obstacles";
+import { buildObstacleMeshes, obstacleTopY, type PlacedObstacle } from "./props/Obstacles";
 import { buildVegetation } from "./props/Vegetation";
 import { buildProp } from "./props/Harbor";
 import { buildFlagPole, updateFlags } from "./props/Flags";
@@ -249,8 +249,9 @@ export class TrackWorld {
       const z = p.z + nz * o.offset;
       const rot = rnd() * Math.PI * 2;
       const r = o.kind === "kivi" ? 1.6 * scale : 0.38 * scale;
+      const topY = obstacleTopY(o.kind, scale);
       if (o.kind === "kivi") {
-        this.colliders.circles.push({ x, z, r });
+        this.colliders.circles.push({ x, z, r, topY });
       } else {
         // Palk on 6 m pikk silinder piki lokaalset X-telge. Kapsli
         // kesklõik lõpeb raadiuse võrra enne visuaalse palgi otsi.
@@ -263,6 +264,7 @@ export class TrackWorld {
           bx: x + dx,
           bz: z + dz,
           r,
+          topY,
         });
       }
       return { kind: o.kind, x, z, scale, rot, r };

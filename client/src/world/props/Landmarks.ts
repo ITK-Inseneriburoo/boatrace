@@ -174,12 +174,13 @@ function makeRapids(width: number, length: number): THREE.Group {
   return root;
 }
 
-function makeSuspensionBridge(): THREE.Group {
+function makeSuspensionBridge(leftGroundY: number, rightGroundY: number): THREE.Group {
   const root = new THREE.Group();
   const span = 88;
   const deckY = 14;
   const towerX = 40;
   const towerTop = 28;
+  const approachLength = 18;
 
   const deck = new THREE.Mesh(new THREE.BoxGeometry(span, 0.65, 5.4), timber);
   deck.position.y = deckY;
@@ -188,6 +189,23 @@ function makeSuspensionBridge(): THREE.Group {
     const plank = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.22, 5.8), darkTimber);
     plank.position.set(i * 4, deckY + 0.42, 0);
     root.add(plank);
+  }
+
+  // Mõlemad kaldteed algavad sillateki kõrguselt ja lõpevad päris
+  // maastikupinnal. Nii ei jää sillateki otsad kalda kohale hõljuma.
+  for (const [side, groundY] of [[-1, leftGroundY], [1, rightGroundY]] as const) {
+    const innerX = side * (span / 2);
+    const outerX = side * (span / 2 + approachLength);
+    const outerY = groundY + 0.38;
+    const dx = outerX - innerX;
+    const dy = outerY - deckY;
+    const approach = new THREE.Mesh(
+      new THREE.BoxGeometry(Math.hypot(dx, dy), 0.65, 5.4),
+      timber,
+    );
+    approach.position.set((innerX + outerX) / 2, (deckY + outerY) / 2, 0);
+    approach.rotation.z = Math.atan2(dy, dx);
+    root.add(approach);
   }
 
   for (const x of [-towerX, towerX]) {
@@ -304,7 +322,7 @@ export class TrackLandmarks {
         this.placeCamp(terrain, 250, -335, Math.PI, seed + 2);
         break;
       case "joekanjon":
-        this.placeWater(makeSuspensionBridge(), 340, 48, 0, this.signatureGroup);
+        this.placeSuspensionBridge(terrain, -76, -127, -2.18);
         this.placeRapids(260, -142, 1.05, 18, 32);
         this.placeRapids(330, 82, -0.68, 16, 28);
         this.placeRapids(-205, 162, -1.82, 17, 30);
@@ -337,28 +355,73 @@ export class TrackLandmarks {
 
   private buildFishingVillage(terrain: Terrain): void {
     const houses = [
-      [84, -148, 0.15, 0xb64032],
-      [96, -145, -0.2, 0xd7a33c],
-      [88, -132, 2.9, 0x2d7f88],
-      [105, -132, 3.15, 0xd9d1bd],
+      [75, -151, 0.15, 0xb64032],
+      [96, -153, -0.2, 0xd7a33c],
+      [75, -132, 2.9, 0x2d7f88],
+      [98, -132, 3.15, 0xd9d1bd],
     ] as const;
     for (const [x, z, rot, color] of houses) {
-      const cabin = makeCabin(color, 0.78);
-      cabin.position.set(x, Math.max(0, terrain.getHeight(x, z)), z);
-      cabin.rotation.y = rot;
-      this.signatureGroup.add(cabin);
+      this.placeCabinOnTerrain(terrain, x, z, rot, color, 0.78);
     }
     const pier = makePier();
-    pier.position.set(96, 0, -111);
+    pier.position.set(90, 0, -92);
     this.detailGroup.add(pier);
-    for (const x of [91, 96, 101]) {
+    for (const x of [85, 90, 95]) {
       const buoy = new THREE.Mesh(
         new THREE.SphereGeometry(0.42, 8, 6),
         new THREE.MeshStandardMaterial({ color: 0xe96a2d, roughness: 0.62 }),
       );
-      buoy.position.set(x, 0.35, -100 - this.rnd() * 5);
+      buoy.position.set(x, 0.35, -72 - this.rnd() * 5);
       this.extraGroup.add(buoy);
     }
+  }
+
+  private placeCabinOnTerrain(
+    terrain: Terrain,
+    x: number,
+    z: number,
+    rot: number,
+    color: number,
+    scale: number,
+  ): void {
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+    root.rotation.y = rot;
+
+    // Neli posti jälgivad igaüks oma nurga maapinda. Maja põrand jääb
+    // kõrgeima nurga kohale ja ülejäänud vahe täitub nähtavate vaiadega.
+    const halfX = 2.4 * scale;
+    const halfZ = 2 * scale;
+    const c = Math.cos(rot), s = Math.sin(rot);
+    const corners = [
+      [-halfX, -halfZ],
+      [-halfX, halfZ],
+      [halfX, -halfZ],
+      [halfX, halfZ],
+    ] as const;
+    const grounds = corners.map(([localX, localZ]) =>
+      terrain.getHeight(
+        x + c * localX + s * localZ,
+        z - s * localX + c * localZ,
+      ),
+    );
+    const baseY = Math.max(0, ...grounds) + 0.12;
+
+    const cabin = makeCabin(color, scale);
+    cabin.position.y = baseY;
+    root.add(cabin);
+    corners.forEach(([localX, localZ], index) => {
+      const groundY = grounds[index];
+      const height = Math.max(0.35, baseY - groundY + 0.18);
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18 * scale, 0.22 * scale, height, 6),
+        darkTimber,
+      );
+      post.position.set(localX, groundY + height / 2, localZ);
+      post.castShadow = true;
+      root.add(post);
+    });
+    this.signatureGroup.add(root);
   }
 
   private buildMountainVillage(terrain: Terrain): void {
@@ -437,6 +500,17 @@ export class TrackLandmarks {
     rapids.position.set(x, 0.32, z);
     rapids.rotation.y = rot;
     this.detailGroup.add(rapids);
+  }
+
+  private placeSuspensionBridge(terrain: Terrain, x: number, z: number, rot: number): void {
+    const approachEnd = 62;
+    const c = Math.cos(rot), s = Math.sin(rot);
+    const leftGroundY = terrain.getHeight(x - c * approachEnd, z + s * approachEnd);
+    const rightGroundY = terrain.getHeight(x + c * approachEnd, z - s * approachEnd);
+    const bridge = makeSuspensionBridge(leftGroundY, rightGroundY);
+    bridge.position.set(x, 0, z);
+    bridge.rotation.y = rot;
+    this.signatureGroup.add(bridge);
   }
 
   private placeWater(

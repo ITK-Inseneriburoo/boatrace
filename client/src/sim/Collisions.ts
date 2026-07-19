@@ -5,6 +5,8 @@ export interface CircleCollider {
   x: number;
   z: number;
   r: number;
+  /** takistuse ülemine Y; puuduv väärtus tähendab vertikaalselt läbimatut objekti */
+  topY?: number;
   /** pehme takistus (poi) — väiksem põrge */
   soft?: boolean;
 }
@@ -15,6 +17,8 @@ export interface SegmentCollider {
   bx: number;
   bz: number;
   r: number;
+  /** takistuse ülemine Y; puuduv väärtus tähendab vertikaalselt läbimatut objekti */
+  topY?: number;
 }
 
 export interface ColliderSet {
@@ -45,6 +49,13 @@ function boatCapsule(boat: BoatPhysics): Capsule {
     bz: boat.pos.z + boat.forwardZ * half,
     r,
   };
+}
+
+/** Kas paadi kiil on takistusest koos väikese turvavaruga kõrgemal. */
+function clearsObstacle(boat: BoatPhysics, topY: number | undefined): boolean {
+  if (topY === undefined) return false;
+  const hullDepth = boat.stats.tyyp === "jett" ? 0.32 : 0.55;
+  return boat.pos.y - hullDepth > topY + 0.12;
 }
 
 function closestOnSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): [number, number] {
@@ -107,6 +118,7 @@ export function resolveCollisions(
   };
 
   for (const c of colliders.circles) {
+    if (clearsObstacle(boat, c.topY)) continue;
     const [hx, hz] = closestOnSegment(c.x, c.z, hull.ax, hull.az, hull.bx, hull.bz);
     const dx = hx - c.x;
     const dz = hz - c.z;
@@ -131,6 +143,7 @@ export function resolveCollisions(
   }
 
   for (const s of colliders.segments) {
+    if (clearsObstacle(boat, s.topY)) continue;
     const [hx, hz, sx, sz] = closestSegmentPoints(hull, s);
     const dx = hx - sx, dz = hz - sz;
     const d = Math.hypot(dx, dz);
