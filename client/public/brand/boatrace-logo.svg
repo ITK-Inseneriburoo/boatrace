@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -5 950 280" role="img" aria-labelledby="title desc">
+  <title id="title">BOATRACE</title>
+  <desc id="desc">Türkiissinise võidusõidupaadi ja lainetega BOATRACE logo</desc>
+  <defs>
+    <linearGradient id="hull" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ffcf1"/>
+      <stop offset="0.48" stop-color="#2ec4b6"/>
+      <stop offset="1" stop-color="#087f8c"/>
+    </linearGradient>
+    <linearGradient id="wake" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#63e6ff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#63e6ff" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#b9fff8"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#087f8c" stop-opacity="0"/>
+      <stop offset="0.25" stop-color="#16a6b6"/>
+      <stop offset="0.7" stop-color="#2ec4b6"/>
+      <stop offset="1" stop-color="#8ffcf1" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-25%" width="130%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#03131d" flood-opacity="0.78"/>
+    </filter>
+  </defs>
+
+  <!-- Kiirusjooned ja kiiluvesi -->
+  <g fill="none" stroke-linecap="round">
+    <path d="M121 71H278" stroke="#66f5eb" stroke-width="7" opacity="0.86"/>
+    <path d="M171 50H291" stroke="#b8fff9" stroke-width="4" opacity="0.72"/>
+    <path d="M76 92H259" stroke="#2ec4b6" stroke-width="4" opacity="0.62"/>
+    <path d="M151 105C241 92 307 95 379 108" stroke="url(#wake)" stroke-width="12"/>
+    <path d="M227 115C309 99 388 105 467 119" stroke="#d9fffc" stroke-width="5" opacity="0.88"/>
+  </g>
+
+  <!-- Võidusõidupaat -->
+  <g filter="url(#shadow)">
+    <path d="M281 79 328 75 359 42h83l39 33h139l-21 22c-15 16-37 24-65 24H351c-27 0-49-9-66-28l-12-13Z" fill="url(#hull)" stroke="#062b38" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M347 74 372 50h61l28 24Z" fill="#eafffd" stroke="#062b38" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M385 55h42l17 19h-76Z" fill="#176b7e"/>
+    <path d="M315 94c52 14 188 16 267-4-14 17-31 24-55 24H358c-18 0-32-6-43-20Z" fill="#e7fffc" opacity="0.95"/>
+    <path d="M473 75h122" stroke="#d8fffb" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="478" cy="61" r="7" fill="#eafffd" stroke="#062b38" stroke-width="4"/>
+  </g>
+
+  <!-- Geomeetriline, fondist sõltumatu kirjamärk -->
+  <g transform="translate(17 0) skewX(-7)" fill="#f4fffe" stroke="#062632" stroke-width="6" stroke-linejoin="round" paint-order="stroke fill" filter="url(#shadow)">
+    <path fill-rule="evenodd" d="M43 121h52c27 0 43 13 43 34 0 11-6 20-16 26 14 5 22 16 22 30 0 24-18 37-48 37H43Zm27 22v28h23c12 0 18-5 18-14s-6-14-18-14Zm0 48v34h25c14 0 21-6 21-17 0-12-7-17-21-17Z"/>
+    <path fill-rule="evenodd" d="M157 184c0-41 21-65 58-65 38 0 59 24 59 65s-21 66-59 66c-37 0-58-25-58-66Zm28 0c0 28 10 42 30 42 21 0 31-14 31-42s-10-41-31-41c-20 0-30 13-30 41Z"/>
+    <path fill-rule="evenodd" d="m276 248 42-127h34l43 127h-30l-8-26h-46l-8 26Zm42-49h32l-16-53Z"/>
+    <path d="M386 121h108v25h-40v102h-28V146h-40Z"/>
+    <path fill-rule="evenodd" d="M500 121h57c32 0 49 15 49 43 0 19-8 32-25 39l34 45h-34l-29-40h-24v40h-28Zm28 24v40h27c15 0 23-7 23-20s-8-20-23-20Z"/>
+    <path fill-rule="evenodd" d="m610 248 42-127h34l43 127h-30l-8-26h-46l-8 26Zm42-49h32l-16-53Z"/>
+    <path d="M789 119c18 0 34 5 47 15l-15 22c-9-7-19-11-30-11-22 0-34 14-34 39 0 26 12 40 34 40 12 0 23-4 32-12l16 21c-14 12-31 18-51 18-38 0-60-25-60-67 0-40 23-65 61-65Z"/>
+    <path d="M835 121h64v24h-37v26h33v23h-33v30h39v24h-66Z"/>
+  </g>
+
+  <!-- Alumine lainejoon -->
+  <path d="M71 246c105-20 184-18 267 2 99 23 190 18 278-6 75-21 142-18 219 4" fill="none" stroke="url(#wave)" stroke-width="8" stroke-linecap="round"/>
+</svg>

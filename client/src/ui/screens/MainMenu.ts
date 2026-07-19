@@ -245,8 +245,11 @@ export class MainMenu implements Screen {
       h(
         "div",
         { class: "center-wrap" },
-        h("h1", { class: "title" }, t("menu.title")),
-        h("p", { class: "subtitle" }, t("menu.subtitle")),
+        h("img", {
+          class: "menu-logo",
+          src: "/brand/boatrace-logo.svg",
+          alt: "BOATRACE",
+        }),
         h(
           "div",
           { class: "panel menu-panel" },
