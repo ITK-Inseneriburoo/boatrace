@@ -327,14 +327,31 @@ function buildKaubalaev(scale: number, colliders: ColliderSet, world: THREE.Matr
     g.add(m);
     void shipLogoTexture().then((tex) => {
       if (!tex) return;
-      const box = new THREE.Box3().setFromObject(m);
+      // Laius KERE järgi, mitte kogu mudeli bbox'ist — kraanad/mastid on
+      // kerest laiemad ja logo jäi muidu õhku hõljuma. Kere = suurima
+      // põhjapindalaga mesh.
+      let hullMesh: THREE.Object3D = m;
+      let bestArea = 0;
+      m.updateMatrixWorld(true);
+      m.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          const b = new THREE.Box3().setFromObject(o);
+          const area = (b.max.x - b.min.x) * (b.max.z - b.min.z);
+          if (area > bestArea) {
+            bestArea = area;
+            hullMesh = o;
+          }
+        }
+      });
+      const box = new THREE.Box3().setFromObject(hullMesh);
       const halfW = (box.max.x - box.min.x) / 2;
+      const logoY = box.min.y + (box.max.y - box.min.y) * 0.55;
       for (const s of [-1, 1]) {
         const logo = new THREE.Mesh(
           new THREE.PlaneGeometry(L * 0.22, L * 0.11),
           new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.6 }),
         );
-        logo.position.set(s * (halfW * 0.86), 3.4, L * 0.12);
+        logo.position.set(s * (halfW * 0.88), logoY, (box.min.z + box.max.z) / 2 + L * 0.06);
         logo.rotation.y = (s * Math.PI) / 2;
         g.add(logo);
       }
