@@ -18,11 +18,14 @@ export class AudioEngine {
   private currentAmbient: WeatherId | null = null;
   private gullTimer = 0;
   private ambientWeather: WeatherId | null = null;
+  private backgroundSuspended = false;
 
   /** Kutsu kasutaja žestilt (klikk) — brauser nõuab seda */
   ensure(): void {
     if (this.ctx) {
-      if (this.ctx.state === "suspended") void this.ctx.resume();
+      if (!this.backgroundSuspended && this.ctx.state !== "running" && this.ctx.state !== "closed") {
+        void this.ctx.resume().catch(() => undefined);
+      }
       return;
     }
     const ctx = new AudioContext();
@@ -50,6 +53,25 @@ export class AudioEngine {
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
 
     if (this.ambientWeather) this.setAmbient(this.ambientWeather);
+    if (this.backgroundSuspended) {
+      void ctx.suspend().catch(() => undefined);
+    }
+  }
+
+  /** Peata kogu heligraaf, kui leht läheb taustale või ekraan lukustub. */
+  suspendForBackground(): void {
+    this.backgroundSuspended = true;
+    if (this.ctx?.state === "running") {
+      void this.ctx.suspend().catch(() => undefined);
+    }
+  }
+
+  /** Jätka varem kasutaja žestiga avatud helikonteksti. */
+  resumeFromBackground(): void {
+    this.backgroundSuspended = false;
+    if (this.ctx && this.ctx.state !== "running" && this.ctx.state !== "closed") {
+      void this.ctx.resume().catch(() => undefined);
+    }
   }
 
   get noise(): AudioBuffer {

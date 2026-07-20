@@ -92,6 +92,8 @@ export class Game {
   private touchStartPending = false;
   private finishTimer = 0;
   private paused = false;
+  private backgrounded = document.hidden;
+  private engineReady = false;
   private choices: MenuChoices | null = null;
   private gateArrow: THREE.Mesh;
   private boostCooldown = new Map<number, number>();
@@ -185,6 +187,10 @@ export class Game {
     // AudioContext vajab kasutaja žesti
     window.addEventListener("pointerdown", () => this.audio.ensure());
     window.addEventListener("keydown", () => this.audio.ensure());
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
+    window.addEventListener("pagehide", this.suspendForBackground);
+    window.addEventListener("pageshow", this.resumeFromBackground);
+    if (this.backgrounded) this.audio.suspendForBackground();
     this.sky.onLightning = (delay) => this.sfx.thunder(delay);
 
     // --- UI ---
@@ -285,8 +291,27 @@ export class Game {
     this.engine.pipeline.render(0);
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-    this.engine.start();
+    this.engineReady = true;
+    if (!this.backgrounded && !document.hidden) this.engine.start();
   }
+
+  private onVisibilityChange = (): void => {
+    if (document.hidden) this.suspendForBackground();
+    else this.resumeFromBackground();
+  };
+
+  private suspendForBackground = (): void => {
+    this.backgrounded = true;
+    if (this.engineReady) this.engine.stop();
+    this.audio.suspendForBackground();
+  };
+
+  private resumeFromBackground = (): void => {
+    if (document.hidden) return;
+    this.backgrounded = false;
+    this.audio.resumeFromBackground();
+    if (this.engineReady) this.engine.start();
+  };
 
   private attachTrackDeps(): void {
     const size = this.track.terrain.size;
