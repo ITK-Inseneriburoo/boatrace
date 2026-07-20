@@ -6,6 +6,8 @@ const et = {
   "menu.nimi.placeholder": "Sisesta nimi…",
   "menu.varv": "Paadi värv",
   "menu.soiduk": "Sõiduk",
+  "menu.tab.voistlus": "Võistlus",
+  "menu.tab.info": "Info",
   "menu.stat.kiirus": "Kiirus",
   "menu.stat.kiirendus": "Kiirendus",
   "menu.stat.haarduvus": "Haarduvus",

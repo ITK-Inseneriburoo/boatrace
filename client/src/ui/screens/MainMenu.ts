@@ -69,7 +69,7 @@ export class MainMenu implements Screen {
     };
 
     // Värvivalik
-    const swatches = h("div", { class: "row" });
+    const swatches = h("div", { class: "row menu-colors" });
     const swatchEls: HTMLElement[] = [];
     for (const c of PLAYER_COLORS) {
       const sw = h("div", { class: "swatch" });
@@ -87,7 +87,7 @@ export class MainMenu implements Screen {
     }
 
     // Sõidukikaardid
-    const vehicles = h("div", { class: "row" });
+    const vehicles = h("div", { class: "row menu-vehicles" });
     const cardEls: HTMLElement[] = [];
     for (const id of VEHICLE_IDS) {
       const v = VEHICLES[id];
@@ -128,7 +128,7 @@ export class MainMenu implements Screen {
     }
 
     // Rajavalik
-    const tracks = h("div", { class: "row" });
+    const tracks = h("div", { class: "row menu-choice-row" });
     const trEls: HTMLElement[] = [];
     const lapEls: HTMLElement[] = [];
     for (const id of TRACK_IDS) {
@@ -153,7 +153,7 @@ export class MainMenu implements Screen {
     }
 
     // Ilmavalik
-    const weathers = h("div", { class: "row" });
+    const weathers = h("div", { class: "row menu-choice-row" });
     const wEls: HTMLElement[] = [];
     for (const w of Object.values(WEATHERS)) {
       const chip = h("div", { class: "chip" }, w.nimi);
@@ -171,7 +171,7 @@ export class MainMenu implements Screen {
     }
 
     // Graafikatase
-    const gfx = h("div", { class: "row" });
+    const gfx = h("div", { class: "row menu-choice-row" });
     const gEls: HTMLElement[] = [];
     for (const level of ["ultra", "korge", "keskmine", "madal"] as GraphicsLevel[]) {
       const chip = h("div", { class: "chip" }, t(`menu.grafika.${level}` as never));
@@ -188,7 +188,7 @@ export class MainMenu implements Screen {
       gfx.appendChild(chip);
     }
 
-    const laps = h("div", { class: "row" });
+    const laps = h("div", { class: "row menu-choice-row" });
     for (const n of [1, 2, 3, 5]) {
       const chip = h("div", { class: "chip" }, String(n));
       chip.dataset.laps = String(n);
@@ -247,12 +247,33 @@ export class MainMenu implements Screen {
       h("div", { class: "menu-section" }, ...children);
     const pwaInstall = new PwaInstall();
 
+    const controls = h("details", { class: "menu-controls" });
+    controls.appendChild(h("summary", {}, t("menu.juhtimine")));
+    controls.appendChild(h("div", { class: "menu-controls-content" }, buildLegend()));
+
+    const playerTab = h(
+      "button",
+      { type: "button", class: "menu-mobile-tab", role: "tab", "aria-controls": "menu-player-panel" },
+      t("menu.soiduk"),
+    ) as HTMLButtonElement;
+    const raceTab = h(
+      "button",
+      { type: "button", class: "menu-mobile-tab", role: "tab", "aria-controls": "menu-race-panel" },
+      t("menu.tab.voistlus"),
+    ) as HTMLButtonElement;
+    const infoTab = h(
+      "button",
+      { type: "button", class: "menu-mobile-tab", role: "tab", "aria-controls": "menu-info-panel" },
+      t("menu.tab.info"),
+    ) as HTMLButtonElement;
+    const mobileTabs = h("div", { class: "menu-mobile-tabs", role: "tablist" }, playerTab, raceTab, infoTab);
+
     this.el = h(
       "div",
       {},
       h(
         "div",
-        { class: "center-wrap" },
+        { class: "center-wrap menu-wrap" },
         h("img", {
           class: "menu-logo",
           src: "/brand/boatrace-logo.svg",
@@ -261,55 +282,75 @@ export class MainMenu implements Screen {
         h(
           "div",
           { class: "panel menu-panel" },
-          pwaInstall.el,
-          h("img", {
-            class: "panel-brand",
-            src: "/brand/logo-ITK-white.svg",
-            alt: "ITK Inseneribüroo",
-          }),
-          section(
+          h(
+            "div",
+            { class: "menu-accessory-row" },
+            pwaInstall.el,
+            mobileTabs,
+            h("img", {
+              class: "panel-brand",
+              src: "/brand/logo-ITK-white.svg",
+              alt: "ITK Inseneribüroo",
+            }),
+          ),
+          h(
+            "div",
+            { class: "menu-layout" },
             h(
               "div",
-              { class: "row", style: "gap:26px;align-items:flex-start" },
-              h("div", { class: "field", style: "width:220px" }, h("label", {}, t("menu.nimi")), this.nameInput),
-              h("div", { class: "field" }, h("label", {}, t("menu.varv")), swatches),
+              { class: "menu-column menu-player-column", id: "menu-player-panel", role: "tabpanel" },
+              section(
+                h(
+                  "div",
+                  { class: "menu-player-settings" },
+                  h("div", { class: "field menu-name-field" }, h("label", {}, t("menu.nimi")), this.nameInput),
+                  h("div", { class: "field" }, h("label", {}, t("menu.varv")), swatches),
+                ),
+              ),
+              section(h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles)),
             ),
-          ),
-          section(h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles)),
-          section(
-            h("div", { class: "field" }, h("label", {}, t("menu.rada")), tracks),
             h(
               "div",
-              { class: "row", style: "gap:26px" },
-              h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
-              h("div", { class: "field" }, h("label", {}, t("menu.ringe")), laps),
+              { class: "menu-column menu-race-column", id: "menu-race-panel", role: "tabpanel" },
+              section(
+                h("div", { class: "field" }, h("label", {}, t("menu.rada")), tracks),
+                h(
+                  "div",
+                  { class: "menu-race-settings" },
+                  h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
+                  h("div", { class: "field" }, h("label", {}, t("menu.ringe")), laps),
+                ),
+              ),
+              section(h("div", { class: "menu-actions" }, soloBtn, this.mpButton, sprintBtn, randomBtn)),
+              section(
+                h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
+                controls,
+              ),
             ),
-          ),
-          section(
-            h("div", { class: "row", style: "justify-content:center" }, soloBtn, this.mpButton, sprintBtn, randomBtn),
-          ),
-          section(
             h(
               "div",
-              { class: "row", style: "gap:26px;justify-content:space-between;width:100%" },
-              h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
-              (() => {
-                const details = h("details", { style: "color:var(--text)" });
-                const summary = h(
-                  "summary",
-                  { style: "cursor:pointer;color:var(--text-dim);font-size:.85rem" },
-                  t("menu.juhtimine"),
-                );
-                details.appendChild(summary);
-                const inner = h("div", { style: "margin-top:10px" }, buildLegend());
-                details.appendChild(inner);
-                return details;
-              })(),
+              { class: "menu-column menu-info-column", id: "menu-info-panel", role: "tabpanel" },
+              section(h("div", { class: "menu-info-content" }, buildLegend())),
             ),
           ),
         ),
       ),
     );
+
+    const panel = this.el.querySelector<HTMLElement>(".menu-panel")!;
+    const setMobileTab = (tab: "player" | "race" | "info"): void => {
+      panel.dataset.mobileTab = tab;
+      playerTab.classList.toggle("selected", tab === "player");
+      raceTab.classList.toggle("selected", tab === "race");
+      infoTab.classList.toggle("selected", tab === "info");
+      playerTab.setAttribute("aria-selected", String(tab === "player"));
+      raceTab.setAttribute("aria-selected", String(tab === "race"));
+      infoTab.setAttribute("aria-selected", String(tab === "info"));
+    };
+    playerTab.onclick = () => setMobileTab("player");
+    raceTab.onclick = () => setMobileTab("race");
+    infoTab.onclick = () => setMobileTab("info");
+    setMobileTab("race");
   }
 
   currentGraphics(): GraphicsLevel {
