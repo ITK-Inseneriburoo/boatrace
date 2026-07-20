@@ -17,6 +17,9 @@ const VAATLEJA: [string, string][] = [
   ["W A S D", "Liiguta kaamerat"],
   ["Q / E", "Kõrgus üles / alla"],
   ["Tab", "Järgne järgmisele paadile / vaba vaade"],
+  ["Pult: vasak kepp", "Liiguta kaamerat"],
+  ["Pult: parem kepp", "Muuda kõrgust"],
+  ["Pult: A", "Järgmine paat / vaba vaade"],
 ];
 
 /** Juhtimisklahvide tabel — kasutusel menüüs ja sõiduaegses overlays */
@@ -41,7 +44,18 @@ export function buildLegend(includeSpectator = true): HTMLElement {
     wrap.appendChild(row(k, v));
   }
   wrap.appendChild(
-    h("div", { style: "color:var(--text-dim);font-size:.78rem;margin-top:4px" }, "Gamepad: RT gaas · LT pidur · vasak kepp rool · B/RB boost · A võime · X veekahur"),
+    h(
+      "div",
+      { style: "color:var(--text-dim);font-size:.78rem;margin-top:4px" },
+      "Pult: RT gaas · LT pidur · vasak kepp rool · B/RB boost · A võime · X veekahur · Y tagasi rajale · Menu paus · View juhtimine",
+    ),
+  );
+  wrap.appendChild(
+    h(
+      "div",
+      { style: "color:var(--text-dim);font-size:.78rem;margin-top:4px" },
+      "Menüüs: D-pad / vasak kepp liigu · A vali · B tagasi",
+    ),
   );
   if (navigator.maxTouchPoints > 0) {
     wrap.appendChild(

@@ -47,6 +47,7 @@ import { PlanarReflection } from "./world/PlanarReflection";
 import { preloadVehicleModels } from "./boats/BoatFactory";
 import { preloadWorldAssets } from "./core/Assets";
 import { waitForAssetLoads } from "./core/AssetLoading";
+import { GamepadNavigation } from "./ui/GamepadNavigation";
 
 type GameState = "menu" | "lobby" | "room" | "countdown" | "racing" | "results";
 
@@ -73,6 +74,7 @@ export class Game {
   readonly ocean = new Ocean();
 
   private screens: ScreenManager;
+  private gamepadNavigation = new GamepadNavigation();
   private menu = new MainMenu();
   private results = new ResultsScreen();
   private lobbyScreen = new LobbyBrowser();
@@ -85,7 +87,16 @@ export class Game {
   private chaseCam: ChaseCamera;
   private race: RaceLogic | null = null;
   private weather: WeatherPreset = WEATHERS.paike;
-  private state: GameState = "menu";
+  private _state: GameState = "menu";
+  private get state(): GameState {
+    return this._state;
+  }
+  private set state(state: GameState) {
+    this._state = state;
+    const gameplayActive = state === "countdown" || state === "racing";
+    this.input.setGameplayActive(gameplayActive);
+    if (gameplayActive) this.engine.renderer.domElement.focus({ preventScroll: true });
+  }
   private mode: "solo" | "mp" = "solo";
   private countdownT = 0;
   private lastCountShown = -1;
@@ -152,6 +163,8 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.engine = new Engine(canvas);
+    // Programmiliselt fookustatav, kuid ei lisandu Tab-klahviga navigeerimise järjekorda.
+    canvas.tabIndex = -1;
     this.graphicsCompatibility = detectGraphicsCompatibility(this.engine.renderer);
     // Sõidukimudelid sooja: menüü ajal parsitakse GLB-d ja tekstuurid GPU-le.
     // Maailma varad soojendab applyGraphics (vajab õiget tekstuuriresolutsiooni)
@@ -263,6 +276,7 @@ export class Game {
     this.screens.show(this.menu);
 
     this.engine.onUpdate = (dt) => {
+      this.input.beginUpdate();
       this.update(dt);
       // Ära kustuta hetkesisendit renderkaadris: 90/120 Hz ekraanil ei ole
       // igal renderkaadril 60 Hz simulatsioonisammu ja vajutus läheks kaduma.
@@ -915,6 +929,7 @@ export class Game {
 
   private update(dt: number): void {
     this.sky.update(dt);
+    this.updateGamepadUi();
 
     const inRace = this.state === "racing" || this.state === "countdown";
 
@@ -956,7 +971,11 @@ export class Game {
     }
 
     // Vaatleja: Tab tsükleerib vaatepunkte
-    if (this.spectating && this.state === "racing" && this.input.wasPressed("Tab")) {
+    if (
+      this.spectating &&
+      this.state === "racing" &&
+      (this.input.wasPressed("Tab") || this.input.spectatorCyclePressed)
+    ) {
       this.spectatorCam.cycle(this.remoteBoats.size);
     }
 
@@ -1045,6 +1064,24 @@ export class Game {
       }
     }
     if (this.state === "racing") this.updateWaterShots(dt);
+  }
+
+  private updateGamepadUi(): void {
+    const inRace = this.state === "racing" || this.state === "countdown";
+    let root: HTMLElement | null = null;
+    if (inRace && this.paused) root = this.hud.el;
+    else if (this.state === "menu") root = this.menu.el;
+    else if (this.state === "lobby") root = this.lobbyScreen.el;
+    else if (this.state === "room") root = this.roomScreen.el;
+    else if (this.state === "results") root = this.results.el;
+
+    this.gamepadNavigation.update(root, this.input);
+    if (!this.input.gamepadCancelPressed) return;
+
+    if (inRace && this.paused) this.setPaused(false);
+    else if (this.state === "lobby") this.lobbyScreen.onBack();
+    else if (this.state === "room") this.roomScreen.onLeave();
+    else if (this.state === "results") this.results.onMenu();
   }
 
   private render(alpha: number, frameDt: number): void {

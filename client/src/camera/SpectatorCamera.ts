@@ -59,11 +59,15 @@ export class SpectatorCamera {
       if (input.isDown("KeyS") || input.isDown("ArrowDown")) mz += 1;
       if (input.isDown("KeyA") || input.isDown("ArrowLeft")) mx -= 1;
       if (input.isDown("KeyD") || input.isDown("ArrowRight")) mx += 1;
-      const len = Math.hypot(mx, mz) || 1;
+      if (Math.abs(input.gamepadMoveX) > Math.abs(mx)) mx = input.gamepadMoveX;
+      if (Math.abs(input.gamepadMoveY) > Math.abs(mz)) mz = input.gamepadMoveY;
+      // Digitaalne diagonaal normaliseerub, analoogkepi väiksem kalle säilitab tundlikkuse.
+      const len = Math.max(1, Math.hypot(mx, mz));
       this.x += (mx / len) * speed * dt;
       this.z += (mz / len) * speed * dt;
       if (input.isDown("KeyQ")) this.height *= 1 + 1.4 * dt;
       if (input.isDown("KeyE")) this.height *= 1 - 1.4 * dt;
+      this.height *= 1 - input.gamepadLookY * 1.4 * dt;
       this.height = clamp(this.height, 18, 420);
 
       // Kerge kalle: kaamera veidi lõuna pool, vaatab põhja poole alla

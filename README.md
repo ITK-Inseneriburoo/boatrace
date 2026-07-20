@@ -37,10 +37,17 @@ faili — ka helid on sünteesitud).
 | S / ↓ | tagasikäik/pidur |
 | A / D või ← / → | rool |
 | Ctrl | boost — lühiajaline kiiruslisa (taastuv energia) |
-| Shift / tühik | triiv (ainult Sportjett) |
+| Shift | sõidukivõime |
+| Tühik | veekahur |
 | R | tagasi rajale (viimase värava juurde) |
+| H | juhtimise legend |
+| Esc | paus |
 
-Toetatud on ka gamepad (RT gaas, vasak kepp rool, B/RB boost, A triiv).
+Toetatud on ka standardse paigutusega gamepad: RT gaas, LT pidur, vasak kepp
+rool, B/RB boost, A sõidukivõime, X veekahur, Y tagasi rajale, Menu paus ja
+View juhtimise legend. Menüüs saab liikuda D-padi või vasaku kepiga, A valib
+ning B läheb tagasi. Vaatlejana liigutab vasak kepp kaamerat, parem kepp muudab
+kõrgust ja A vahetab jälitatavat paati või vaba vaadet.
 
 ## Arendus
 

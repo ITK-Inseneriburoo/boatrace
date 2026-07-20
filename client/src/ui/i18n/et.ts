@@ -115,7 +115,7 @@ const et = {
   "tuba.vaatleja": "Vaatleja",
   "tuba.vaatlen": "👁 Vaatlen",
   "lobby.vaatle": "Vaatle",
-  "hud.vaatleja.legend": "WASD — liigu · Q/E — kõrgus · Tab — järgne paadile",
+  "hud.vaatleja.legend": "WASD — liigu · Q/E — kõrgus · Tab — vaade · Pult: vasak/parem kepp + A",
   "tuba.alusta": "Alusta võistlust",
   "tuba.lahku": "Lahku toast",
   "tuba.host": "host",

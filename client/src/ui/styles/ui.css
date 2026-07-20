@@ -105,6 +105,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.gamepad-focus {
+  outline: 3px solid var(--accent) !important;
+  outline-offset: 3px;
+}
+
 input[type="text"] {
   font: inherit;
   color: var(--text);
