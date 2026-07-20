@@ -308,6 +308,12 @@ export class MainMenu implements Screen {
                 ),
               ),
               section(h("div", { class: "field" }, h("label", {}, t("menu.soiduk")), vehicles)),
+              h("img", {
+                class: "menu-mobile-player-logo",
+                src: "/brand/boatrace-logo.svg",
+                alt: "",
+                "aria-hidden": "true",
+              }),
             ),
             h(
               "div",
@@ -326,6 +332,12 @@ export class MainMenu implements Screen {
                 h("div", { class: "field menu-graphics-field" }, h("label", {}, t("menu.grafika")), gfx),
                 controls,
               ),
+              h("img", {
+                class: "menu-mobile-race-logo",
+                src: "/brand/boatrace-logo.svg",
+                alt: "",
+                "aria-hidden": "true",
+              }),
             ),
             h(
               "div",
