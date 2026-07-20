@@ -1,7 +1,7 @@
 import type { VehicleId } from "@shared/types";
 import { VEHICLES } from "@shared/vehicles";
 import { Input, type TouchAction } from "./Input";
-import { appleScreenRotation, isAppleMobile, isTouchDevice } from "./Platform";
+import { appleScreenRotation, isAppleMobile } from "./Platform";
 import { h } from "../ui/ScreenManager";
 import { t } from "../ui/i18n/et";
 
@@ -20,7 +20,6 @@ const THROTTLE_BOOST_RELEASE = 1.08;
 export class TouchControls {
   readonly el: HTMLElement;
 
-  private readonly enabled = isTouchDevice();
   // iPadOS-i Euler-nurgad lähevad landscape'is ±90° juures singulaarseks.
   // Gravitatsioonivektor annab seal mõlemas suunas stabiilse roolisignaali.
   private readonly useGravitySensor = isAppleMobile();
@@ -45,6 +44,11 @@ export class TouchControls {
   private sensorTimer: number | null = null;
   private tiltRequest: Promise<void> | null = null;
   private manualSteering = true;
+  /** Viimane päris sisend oli puude, mitte seadme oletus maxTouchPoints'i järgi. */
+  private touchInputActive = false;
+  /** Sõiduk, mille jaoks Game puutejuhtimist parajasti vajab; null = menüü. */
+  private requestedVehicle: VehicleId | null = null;
+  private visible = false;
   private readonly activePointers = new Map<HTMLElement, number>();
   private readonly lastPointerDown = new WeakMap<HTMLElement, number>();
   private readonly resetFallbackTouches: Array<() => void> = [];
@@ -119,7 +123,7 @@ export class TouchControls {
 
     this.el = h(
       "div",
-      { class: "touch-controls", "aria-hidden": this.enabled ? "false" : "true" },
+      { class: "touch-controls", "aria-hidden": "true" },
       tools,
       this.steerPad,
       actions,
@@ -148,6 +152,14 @@ export class TouchControls {
     );
 
     window.addEventListener("resize", this.syncOrientation);
+    // Võimekuse (maxTouchPoints / coarse pointer) põhjal ei saa eristada
+    // puuteekraaniga läptoppi tahvlist. Tegelik pointerType ütleb, kuidas
+    // kasutaja mängu sel hetkel juhib.
+    window.addEventListener("pointerdown", this.onInputPointerDown, true);
+    window.addEventListener("keydown", this.onKeyboardInput, true);
+    // Pointer Events on sihtbrauserites olemas; touchstart on varutee vanemale
+    // WebKitile ja seadmetele, mis pointerType'i korrektselt ei raporteeri.
+    window.addEventListener("touchstart", this.onTouchInput, { capture: true, passive: true });
     screen.orientation?.addEventListener("change", this.onScreenOrientationChange);
     window.addEventListener("blur", () => this.resetControls());
     window.addEventListener("pagehide", () => this.resetControls());
@@ -156,7 +168,6 @@ export class TouchControls {
       if (document.hidden) this.resetControls();
     });
 
-    if (!this.enabled) this.el.style.display = "none";
     this.updateSteerMode();
   }
 
@@ -165,7 +176,7 @@ export class TouchControls {
    * requestPermission() väljakutset pärast await'i või taimerit.
    */
   prepareTilt(): Promise<void> {
-    if (!this.enabled || this.manualSteering || this.tiltState === "active") {
+    if (!this.touchInputActive || this.manualSteering || this.tiltState === "active") {
       return Promise.resolve();
     }
     if (this.tiltRequest) return this.tiltRequest;
@@ -206,17 +217,14 @@ export class TouchControls {
   }
 
   show(vehicle: VehicleId): void {
-    if (!this.enabled) return;
-    this.resetControls();
+    this.requestedVehicle = vehicle;
     this.abilityBtn.textContent = VEHICLES[vehicle].abilityName;
-    this.el.classList.add("active");
-    this.syncOrientation();
-    if (this.tiltState === "idle") void this.prepareTilt();
+    this.syncVisibility();
   }
 
   hide(): void {
-    this.el.classList.remove("active");
-    this.resetControls();
+    this.requestedVehicle = null;
+    this.syncVisibility();
   }
 
   setPaused(paused: boolean): void {
@@ -399,7 +407,44 @@ export class TouchControls {
   private syncAxes(): void {
     const useTilt = this.tiltState === "active" && !this.manualSteering;
     const steer = useTilt ? this.tiltSteer : this.padSteer;
-    this.input.setTouchAxes(this.portrait ? 0 : this.throttle, this.portrait ? 0 : steer);
+    const neutral = !this.visible || this.portrait;
+    this.input.setTouchAxes(neutral ? 0 : this.throttle, neutral ? 0 : steer);
+  }
+
+  private onInputPointerDown = (event: PointerEvent): void => {
+    // Ära vaheta režiimi keset juba nähtava puutenupu sündmuse dispatch'i.
+    // See jätaks peidetud nupu pointerup'ita allavajutatud olekusse.
+    if (event.target instanceof Node && this.el.contains(event.target)) return;
+    this.setTouchInputActive(event.pointerType === "touch");
+  };
+
+  private onTouchInput = (): void => {
+    this.setTouchInputActive(true);
+  };
+
+  private onKeyboardInput = (): void => {
+    this.setTouchInputActive(false);
+  };
+
+  private setTouchInputActive(active: boolean): void {
+    if (this.touchInputActive === active) return;
+    this.touchInputActive = active;
+    this.syncVisibility();
+  }
+
+  private syncVisibility(): void {
+    const shouldShow = this.touchInputActive && this.requestedVehicle !== null;
+    if (this.visible === shouldShow) return;
+
+    this.visible = shouldShow;
+    this.el.classList.toggle("active", shouldShow);
+    this.el.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+    this.resetControls();
+
+    if (shouldShow) {
+      this.syncOrientation();
+      if (this.tiltState === "idle") void this.prepareTilt();
+    }
   }
 
   private resetControls(): void {
