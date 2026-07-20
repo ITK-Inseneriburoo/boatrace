@@ -2,7 +2,11 @@ import * as THREE from "three";
 import { Engine } from "./core/Engine";
 import { Input } from "./core/Input";
 import { TouchControls } from "./core/TouchControls";
-import { isAppleMobile } from "./core/Platform";
+import {
+  applyGraphicsCompatibility,
+  detectGraphicsCompatibility,
+  type GraphicsCompatibility,
+} from "./core/GraphicsCompatibility";
 import { Ocean } from "./world/Ocean";
 import { SkySystem } from "./world/SkySystem";
 import { WEATHERS, type WeatherPreset } from "./world/WeatherPresets";
@@ -65,7 +69,7 @@ export class Game {
   readonly engine: Engine;
   readonly input = new Input();
   readonly sky: SkySystem;
-  private readonly appleMobile = isAppleMobile();
+  private readonly graphicsCompatibility: GraphicsCompatibility;
   readonly ocean = new Ocean();
 
   private screens: ScreenManager;
@@ -146,6 +150,7 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.engine = new Engine(canvas);
+    this.graphicsCompatibility = detectGraphicsCompatibility(this.engine.renderer);
     // Sõidukimudelid sooja: menüü ajal parsitakse GLB-d ja tekstuurid GPU-le.
     // Maailma varad soojendab applyGraphics (vajab õiget tekstuuriresolutsiooni)
     this.vehicleAssetsReady = preloadVehicleModels(this.engine.renderer);
@@ -319,18 +324,12 @@ export class Game {
     this.effectiveGraphics = level;
     this.lowFpsTime = 0;
     const selectedTier = QUALITY_TIERS[level];
-    // iPadOS WebKit võib HalfFloat post-processing RT ja läbipaistvate DOM-kihtide
-    // kooskomposiitimisel anda terve kaadri suuruseid musti sähvatusi. Apple'i
-    // puuteseadmel renderdame otse canvas'ele; maailma detailsus jääb alles.
-    const tier: QualityTier = this.appleMobile
-      ? {
-          ...selectedTier,
-          pixelRatio: Math.min(selectedTier.pixelRatio, 1.25),
-          pipeline: { composer: false, samples: 0, aa: "none", bloom: false, gtao: false },
-          ocean: { ...selectedTier.ocean, planarRes: 0 },
-          glassTransmission: false,
-        }
-      : selectedTier;
+    // Draiveri/WebGL-i workaround'id lahendatakse keskselt; menüüs valitud aste
+    // jääb alles ja siin rakendub ainult tuvastatud seadme minimaalne piirang.
+    const tier: QualityTier = applyGraphicsCompatibility(
+      selectedTier,
+      this.graphicsCompatibility,
+    );
     setCurrentTier(tier);
     this.engine.setPixelRatioCap(tier.pixelRatio);
     this.engine.pipeline.configure(tier.pipeline);
