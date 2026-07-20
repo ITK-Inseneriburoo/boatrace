@@ -57,6 +57,7 @@ export class Input {
   private gamepadButtons: boolean[] = [];
   private gamepadButtonValues: number[] = [];
   private gamepadJustPressed = new Set<number>();
+  private gamepadJustActivated = false;
   private gamepadAxes: number[] = [];
   private previousGamepadAxes: number[] = [];
 
@@ -86,6 +87,7 @@ export class Input {
   beginUpdate(): void {
     const previousButtons = this.gamepadButtons;
     this.previousGamepadAxes = this.gamepadAxes;
+    this.gamepadJustActivated = false;
 
     const gp = this.firstGamepad();
     this.gamepadConnected = gp !== null;
@@ -94,7 +96,18 @@ export class Input {
     this.gamepadAxes = gp ? [...gp.axes] : [];
 
     for (let i = 0; i < this.gamepadButtons.length; i++) {
-      if (this.gamepadButtons[i] && !previousButtons[i]) this.gamepadJustPressed.add(i);
+      if (this.gamepadButtons[i] && !previousButtons[i]) {
+        this.gamepadJustPressed.add(i);
+        this.gamepadJustActivated = true;
+      }
+    }
+    for (let i = 0; i < this.gamepadAxes.length; i++) {
+      if (
+        Math.abs(this.gamepadAxes[i] ?? 0) > 0.55 &&
+        Math.abs(this.previousGamepadAxes[i] ?? 0) <= 0.55
+      ) {
+        this.gamepadJustActivated = true;
+      }
     }
   }
 
@@ -103,6 +116,7 @@ export class Input {
     this.justPressed.clear();
     this.touchJustPressed.clear();
     this.gamepadJustPressed.clear();
+    this.gamepadJustActivated = false;
   }
 
   setTouchAxes(throttle: number, steer: number): void {
@@ -127,6 +141,7 @@ export class Input {
     this.justPressed.clear();
     this.touchJustPressed.clear();
     this.gamepadJustPressed.clear();
+    this.gamepadJustActivated = false;
     this.resetTouch();
   }
 
@@ -167,6 +182,11 @@ export class Input {
 
   get hasGamepad(): boolean {
     return this.gamepadConnected;
+  }
+
+  /** Esimene uus puldinupp või märgatav kepiliigutus sellel simulatsioonisammul. */
+  get gamepadActivated(): boolean {
+    return this.gamepadJustActivated;
   }
 
   get throttle(): number {

@@ -20,7 +20,7 @@ export class AudioEngine {
   private ambientWeather: WeatherId | null = null;
   private backgroundSuspended = false;
 
-  /** Kutsu kasutaja žestilt (klikk) — brauser nõuab seda */
+  /** Kutsu kasutaja žestilt (klikk, klahv või puldi interaktsioon) — brauser nõuab seda. */
   ensure(): void {
     if (this.ctx) {
       if (!this.backgroundSuspended && this.ctx.state !== "running" && this.ctx.state !== "closed") {
@@ -55,6 +55,8 @@ export class AudioEngine {
     if (this.ambientWeather) this.setAmbient(this.ambientWeather);
     if (this.backgroundSuspended) {
       void ctx.suspend().catch(() => undefined);
+    } else if (ctx.state !== "running" && ctx.state !== "closed") {
+      void ctx.resume().catch(() => undefined);
     }
   }
 

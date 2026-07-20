@@ -277,6 +277,8 @@ export class Game {
 
     this.engine.onUpdate = (dt) => {
       this.input.beginUpdate();
+      // Gamepad API-l pole keydown-laadset DOM-sündmust; ava heli pollitud kasutajažestilt.
+      if (this.input.gamepadActivated) this.audio.ensure();
       this.update(dt);
       // Ära kustuta hetkesisendit renderkaadris: 90/120 Hz ekraanil ei ole
       // igal renderkaadril 60 Hz simulatsioonisammu ja vajutus läheks kaduma.
