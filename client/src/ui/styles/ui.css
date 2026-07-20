@@ -932,6 +932,13 @@ table.results tr.me td { color: var(--accent); font-weight: 700; }
   .chip {
     min-height: 44px;
   }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.15;
+    text-align: center;
+  }
   .pwa-actions {
     top: 12px;
     left: 14px;
@@ -1153,21 +1160,32 @@ table.results tr.me td { color: var(--accent); font-weight: 700; }
     flex-basis: calc((100% - 32px) / 5);
     min-width: 0;
   }
-  .menu-race-column .menu-section:first-child {
+  .menu-race-column {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 22px 12px;
+    height: 100%;
   }
-  .menu-race-settings { gap: 6px; }
-  .menu-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .menu-race-column .menu-section:last-child {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
+  .menu-race-column > .menu-section,
+  .menu-race-settings {
+    display: contents;
   }
-  .menu-race-column .menu-section:last-child > .field { align-items: center; }
-  .menu-controls { width: auto; }
-  .menu-controls-content { margin-top: 6px; }
+  .menu-track-field { grid-area: 1 / 1; }
+  .menu-laps-field { grid-area: 1 / 2; }
+  .menu-actions {
+    grid-area: 4 / 1 / 5 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .menu-weather-field { grid-area: 2 / 1; }
+  .menu-graphics-field { grid-area: 2 / 2; }
+  .menu-track-field,
+  .menu-laps-field,
+  .menu-weather-field,
+  .menu-graphics-field {
+    align-items: center;
+    min-width: 0;
+  }
 }
 
 @media (pointer: coarse) and (orientation: landscape) and (max-width: 700px) and (max-height: 600px) {

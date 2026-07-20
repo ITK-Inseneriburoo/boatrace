@@ -313,17 +313,17 @@ export class MainMenu implements Screen {
               "div",
               { class: "menu-column menu-race-column", id: "menu-race-panel", role: "tabpanel" },
               section(
-                h("div", { class: "field" }, h("label", {}, t("menu.rada")), tracks),
+                h("div", { class: "field menu-track-field" }, h("label", {}, t("menu.rada")), tracks),
                 h(
                   "div",
                   { class: "menu-race-settings" },
-                  h("div", { class: "field" }, h("label", {}, t("menu.ilm")), weathers),
-                  h("div", { class: "field" }, h("label", {}, t("menu.ringe")), laps),
+                  h("div", { class: "field menu-weather-field" }, h("label", {}, t("menu.ilm")), weathers),
+                  h("div", { class: "field menu-laps-field" }, h("label", {}, t("menu.ringe")), laps),
                 ),
               ),
               section(h("div", { class: "menu-actions" }, soloBtn, this.mpButton, sprintBtn, randomBtn)),
               section(
-                h("div", { class: "field" }, h("label", {}, t("menu.grafika")), gfx),
+                h("div", { class: "field menu-graphics-field" }, h("label", {}, t("menu.grafika")), gfx),
                 controls,
               ),
             ),

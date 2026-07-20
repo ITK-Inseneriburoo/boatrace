@@ -27,9 +27,14 @@
       }
       #boot-loader.done { opacity: 0; pointer-events: none; }
       #boot-loader.failed .boot-bar::after { animation: none; background: #d7263d; transform: scaleX(1); }
-      .boot-content { width: min(360px, calc(100vw - 48px)); text-align: center; }
-      .boot-title { font-size: clamp(2rem, 9vw, 4rem); font-weight: 800; letter-spacing: 0.12em; }
-      .boot-wave { margin: 2px 0 28px; color: #2ec4b6; font-size: 1.3rem; letter-spacing: 0.5em; }
+      .boot-content { width: min(560px, calc(100vw - 40px)); text-align: center; }
+      .boot-logo {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin: 0 auto 28px;
+        filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35));
+      }
       .boot-bar { height: 3px; overflow: hidden; border-radius: 2px; background: rgba(255,255,255,0.12); }
       .boot-bar::after {
         content: "";
@@ -40,6 +45,8 @@
         transform-origin: left;
         animation: boot-progress 1.35s ease-in-out infinite;
       }
+      .boot-bar,
+      #boot-status { width: min(360px, 100%); margin-right: auto; margin-left: auto; }
       #boot-status { min-height: 1.4em; margin-top: 14px; color: #9fb0bc; font-size: 0.9rem; }
       @keyframes boot-progress {
         0% { transform: translateX(-100%) scaleX(0.35); }
@@ -57,8 +64,7 @@
     <div id="ui"></div>
     <div id="boot-loader" role="status" aria-live="polite">
       <div class="boot-content">
-        <div class="boot-title">BOATRACE</div>
-        <div class="boot-wave" aria-hidden="true">≈ ≈ ≈</div>
+        <img class="boot-logo" src="/brand/boatrace-logo.svg" alt="BOATRACE" />
         <div class="boot-bar" aria-hidden="true"></div>
         <div id="boot-status"></div>
       </div>
