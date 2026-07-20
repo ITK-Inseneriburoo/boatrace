@@ -4,6 +4,8 @@ import type { S2C } from "../../shared/src/protocol";
 import type { VehicleId } from "../../shared/src/types";
 import type { Room } from "./Room";
 
+const MAX_SOCKET_BUFFERED_BYTES = 256 * 1024;
+
 export class Player {
   readonly id = randomUUID().slice(0, 8);
   readonly token = randomUUID();
@@ -48,8 +50,19 @@ export class Player {
   }
 
   send(msg: S2C): void {
-    if (this.socket && this.socket.readyState === this.socket.OPEN) {
-      this.socket.send(JSON.stringify(msg));
+    const socket = this.socket;
+    if (!socket || socket.readyState !== socket.OPEN) return;
+
+    const payload = JSON.stringify(msg);
+    if (socket.bufferedAmount + Buffer.byteLength(payload) > MAX_SOCKET_BUFFERED_BYTES) {
+      socket.terminate();
+      return;
+    }
+
+    try {
+      socket.send(payload);
+    } catch {
+      socket.terminate();
     }
   }
 

@@ -6,6 +6,9 @@ import type { Player } from "./Player";
 import { SessionManager } from "./SessionManager";
 import { RoomManager } from "./RoomManager";
 
+const HELLO_TIMEOUT_MS = 5_000;
+const PRE_AUTH_MESSAGES_PER_SECOND = 10;
+
 /**
  * Ühe socketi elutsükkel: hello → sõnumite marsruutimine → disconnect.
  * Rate-limitid ja teleportide kontroll elavad siin.
@@ -17,8 +20,25 @@ export class ConnectionHandler {
   handleConnection(socket: WebSocket): void {
     let player: Player | null = null;
     let garbage = 0;
+    const preAuthWindow = { start: Date.now(), count: 0 };
+    const helloTimer = setTimeout(() => {
+      if (!player) socket.terminate();
+    }, HELLO_TIMEOUT_MS);
 
     socket.on("message", (data) => {
+      // Piira liiklust juba enne JSON-i parsimist ja sessiooni loomist.
+      if (!player) {
+        const now = Date.now();
+        if (now - preAuthWindow.start > 1000) {
+          preAuthWindow.start = now;
+          preAuthWindow.count = 0;
+        }
+        if (++preAuthWindow.count > PRE_AUTH_MESSAGES_PER_SECOND) {
+          socket.terminate();
+          return;
+        }
+      }
+
       let raw: unknown;
       try {
         raw = JSON.parse(String(data));
@@ -35,6 +55,7 @@ export class ConnectionHandler {
       if (!player) {
         if (msg.type !== "hello") return;
         player = this.handleHello(msg, socket);
+        clearTimeout(helloTimer);
         return;
       }
 
@@ -55,6 +76,7 @@ export class ConnectionHandler {
     });
 
     socket.on("close", () => {
+      clearTimeout(helloTimer);
       // Ignoreeri vana socketi close'i, kui mängija on vahepeal juba uue
       // socketiga reconnectinud (tryReconnect termineerib vana socketi — see
       // close ei tohi värsket ühendust maha võtta).
