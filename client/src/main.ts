@@ -8,6 +8,11 @@ document.documentElement.classList.toggle("apple-mobile", isAppleMobile());
 
 registerSW({
   immediate: true,
+  // Navigatsioon on network-first ja käivitas võimalusel juba serveri värske
+  // bundle'i. Uus worker võtab cache'i üle taustal; automaatne reload tekitaks
+  // kasutajale lihtsalt teise laadimiskuva.
+  onNeedReload: () =>
+    console.info("Offline-vahemälu uuendatud; uus worker on kasutusel."),
   onRegisterError: (err) => console.error("Offline-vahemälu käivitamine ebaõnnestus:", err),
 });
 

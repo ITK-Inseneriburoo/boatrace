@@ -14,6 +14,27 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
+        // Vaikimisi serveerib Workbox index.html alati precache'ist ja avastab
+        // uue versiooni alles pärast vana rakenduse käivitumist. Navigatsioon
+        // küsib nüüd esmalt võrku; offline'is langeb ühe sekundi järel tagasi
+        // viimase runtime-vastuse või precache'i index.html peale.
+        navigateFallback: undefined,
+        // Muidu teisendab precache'i marsruut `/` vaikimisi `/index.html`-ks
+        // ja jõuab network-first reeglist ette.
+        directoryIndex: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "boatrace-pages",
+              networkTimeoutSeconds: 1,
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 8 },
+              precacheFallback: { fallbackURL: "index.html" },
+            },
+          },
+        ],
       },
     }),
   ],
